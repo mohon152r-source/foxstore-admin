@@ -1,12 +1,11 @@
 /**
  * Fox Store API base
- * Admin panel -> Render (primary)
- * Cloudflare Workers -> game validate only (not admin default)
+ * Admin panel -> Cloudflare Worker (primary)
  */
 (function (w) {
-  var PRIMARY_API = "https://fox-store-api-4-l.onrender.com";
-  var BACKUP_API = "https://fox-store-api-4-l.onrender.com";
-  var GAME_API = "https://fox-store-api-4-l.onrender.com";
+  var PRIMARY_API = "https://foxstore-api.mohon153r.workers.dev";
+  var BACKUP_API = "https://foxstore-api.mohon153r.workers.dev";
+  var GAME_API = "https://foxstore-api.mohon153r.workers.dev";
 
   function strip(u) {
     return String(u || "").replace(/\/$/, "");
