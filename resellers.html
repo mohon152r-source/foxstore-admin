@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' https: data:;
+  connect-src 'self' https: http://localhost:* http://127.0.0.1:*;
+">
+  <title>Sellers — Fox Store</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .zoom-panel { margin-top: 16px; }
+    .zoom-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .stat-pill {
+      border-radius: 12px; padding: 12px 14px; border: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .stat-pill .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+    .stat-pill .val { font-size: 18px; font-weight: 700; margin-top: 4px; }
+    .stat-pill.green { border-color: rgba(34,197,94,0.4); }
+    .stat-pill.green .val { color: #4ade80; }
+    .stat-pill.blue { border-color: rgba(56,189,248,0.4); }
+    .stat-pill.blue .val { color: #38bdf8; }
+    .stat-pill.gold { border-color: rgba(250,204,21,0.4); }
+    .stat-pill.gold .val { color: #facc15; }
+    .stat-pill.red { border-color: rgba(239,68,68,0.4); }
+    .stat-pill.red .val { color: #f87171; }
+    .mini-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+    .mini-table th, .mini-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+    .mini-table th { color: var(--muted); font-weight: 500; }
+    .seller-card.selected { outline: 2px solid var(--primary); }
+  </style>
+
+  <style>
+    .compact-zoom { max-width: 720px; margin: 0 auto 16px; }
+    .compact-zoom .zoom-head { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--border); }
+    .compact-zoom .zoom-identity { display:flex; align-items:center; gap:10px; min-width:0; }
+    .compact-zoom .zoom-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:10px; }
+    .compact-zoom .stat-pill { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:8px 10px; }
+    .compact-zoom .stat-pill .lbl { font-size:10px; color:var(--muted); text-transform:uppercase; }
+    .compact-zoom .stat-pill .val { font-weight:700; font-size:15px; margin-top:2px; }
+    .compact-zoom .stat-pill.green .val { color:var(--success); }
+    .compact-zoom .zoom-actions { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+    .compact-zoom .zoom-section { margin-top:12px; }
+    .compact-zoom .zoom-sec-title { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:6px; }
+    .compact-zoom .zoom-list { display:flex; flex-direction:column; gap:4px; }
+    .compact-zoom .zoom-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:12px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; background:var(--bg); }
+    .compact-zoom .zoom-row .muted, .compact-zoom .muted { color:var(--muted); }
+    .compact-zoom .empty-mini { font-size:12px; color:var(--muted); padding:6px 0; }
+    .compact-zoom .perm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:6px; }
+    .compact-zoom .perm-chip { display:flex; align-items:center; gap:6px; font-size:11px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; cursor:pointer; }
+    .compact-zoom .perm-chip.on { background:rgba(52,211,153,0.12); border-color:rgba(52,211,153,0.35); }
+    .compact-zoom .perm-chip input { width:auto; margin:0; }
+    .compact-zoom .log-act { font-weight:600; color:#a5b4fc; }
+    @media (max-width:640px) {
+      .compact-zoom .zoom-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="layout"></div>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    var sellers = [];
+    var selected = new Set();
+    var isRulerUser = false;
+
+    requireAuth();
+    document.addEventListener("auth-ready", function () {
+    // delegated-del: seller delete buttons (avoids broken inline onclick with special usernames)
+    document.addEventListener("click", function (ev) {
+      var t = ev.target;
+      if (!t || !t.closest) return;
+      var btn = t.closest(".btn-del-seller");
+      if (!btn) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      var id = btn.getAttribute("data-id");
+      var username = btn.getAttribute("data-username") || "";
+      if (id && typeof window.deleteReseller === "function") window.deleteReseller(id, username);
+    });
+
+      if (!isManager()) {
+        mountShell("Sellers");
+        document.getElementById("page-content").innerHTML = '<div class="empty">Forbidden</div>';
+        return;
+      }
+      isRulerUser = isRuler();
+      mountShell("Sellers");
+      document.getElementById("page-content").innerHTML =
+        '<div class="page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">' +
+          '<div><h1>Sellers</h1><p id="sellerCount">Resellers &amp; superadmins</p></div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+            '<button class="btn" type="button" onclick="toggleSelectAll()">Select all</button>' +
+            '<button class="btn btn-primary" type="button" onclick="showCreateForm()">+ Add</button>' +
+          '</div>' +
+        '</div>' +
+        '<div id="bulkSellerBar"></div>' +
+        '<div id="formContainer"></div>' +
+        '<div id="zoomContainer"></div>' +
+        '<div id="content" class="seller-grid"><div class="empty"><span class="spinner"></span></div></div>';
+      loadResellers();
+    });
+
+    async function loadResellers() {
+      var box = document.getElementById("content");
+      try {
+        var res = await api("/resellers");
+        sellers = res.data || [];
+        var el = document.getElementById("sellerCount");
+        if (el) el.textContent = sellers.length + " account(s)";
+        renderSellers();
+      } catch (e) {
+        box.innerHTML = '<div class="empty" style="color:var(--danger)">' + esc(e.message) + '</div>';
+      }
+    }
+
+    function renderSellers() {
+      var box = document.getElementById("content");
+      if (!sellers.length) {
+        box.innerHTML = '<div class="empty">No sellers yet</div>';
+        renderBulkBar();
+        return;
+      }
+      box.className = "seller-grid";
+      box.innerHTML = sellers.map(function (r) {
+        var roleClass = r.role === "superadmin" ? "seller-card--superadmin" : "seller-card--reseller";
+        var active = r.isActive !== false;
+        var avatar = (r.avatarUrl && String(r.avatarUrl).trim()) ? String(r.avatarUrl).trim() : DEFAULT_AVATAR;
+        var balBdt = r.balance != null ? Number(r.balance) : 0;
+        var bal = formatMoney(balBdt, walletCurrency());
+        var disc = r.discountPercent != null ? Number(r.discountPercent) : 0;
+        var sel = selected.has(r.id);
+        var balColor = Number(bal) <= 0 ? "var(--danger)" : Number(bal) < 100 ? "var(--warning)" : "var(--success)";
+
+        var isSelf = window.__user && String(r.id) === String(window.__user.id);
+        var actions = "";
+        if (isSelf) {
+          actions = '<span style="font-size:11px;color:var(--muted)">Own account — manage in Me tab</span>';
+        } else {
+          actions =
+            '<button class="btn btn-sm" type="button" title="Zoom details" onclick="zoomSeller(\'' + esc(r.id) + '\')">🔍 Zoom</button>' +
+            '<button class="btn btn-sm" type="button" style="color:var(--success)" onclick="rechargeReseller(\'' + esc(r.id) + '\',\'' + esc(r.username) + '\')">+ Bal</button>' +
+            '<button class="btn btn-sm" type="button" onclick="toggleActive(\'' + esc(r.id) + '\',' + (active ? "false" : "true") + ',\'' + esc(r.username) + '\')" title="' + (active ? "Disable" : "Activate") + '">' +
+              (active ? "⏸ Disable" : "▶ Activate") + '</button>' +
+            '<button class="btn btn-sm" type="button" onclick="editReseller(\'' + esc(r.id) + '\')">✏️</button>';
+          if (isRulerUser) {
+            actions += '<button class="btn btn-sm" type="button" style="color:#38bdf8" onclick="editBalance(\'' + esc(r.id) + '\',\'' + esc(r.username) + '\',' + balBdt + ')" title="Edit balance">Edit bal</button>';
+            actions += '<button class="btn btn-sm" type="button" style="color:#a78bfa" onclick="setDiscount(\'' + esc(r.id) + '\',\'' + esc(r.username) + '\',' + disc + ')" title="Discount %">Disc%</button>';
+            if (r.role === "reseller") {
+              actions += '<button class="btn btn-sm" type="button" style="color:#a78bfa" onclick="promoteSeller(\'' + esc(r.id) + '\',\'' + esc(r.username) + '\',\'superadmin\')" title="Promote to Superadmin">⬆ Super</button>';
+            } else if (r.role === "superadmin") {
+              actions += '<button class="btn btn-sm" type="button" style="color:#fbbf24" onclick="promoteSeller(\'' + esc(r.id) + '\',\'' + esc(r.username) + '\',\'reseller\')" title="Demote to Reseller">⬇ Reseller</button>';
+            }
+          }
+          if (isRulerUser) {
+            actions += '<button class="btn btn-sm btn-danger btn-del-seller" type="button" data-id="' + esc(r.id) + '" data-username="' + esc(r.username) + '">Delete</button>';
+          }
+        }
+
+        return (
+          '<div class="seller-card ' + roleClass + (sel ? " selected" : "") + '" style="cursor:pointer" onclick="zoomSeller(\'' + esc(r.id) + '\')">' +
+            '<div class="seller-top" onclick="event.stopPropagation()">' +
+              '<input type="checkbox" class="checkbox" style="margin-right:4px"' + (sel ? " checked" : "") +
+                ' onchange="toggleSellerSelect(\'' + esc(r.id) + '\', this.checked)">' +
+              '<img class="seller-avatar" src="' + esc(avatar) + '" alt="" onerror="this.onerror=null;this.src=DEFAULT_AVATAR">' +
+              '<div style="min-width:0;flex:1">' +
+                '<div class="seller-name">' +
+                  '<span class="seller-status-dot ' + (active ? "on" : "off") + '"></span>' +
+                  '<span style="color:' + (active ? "var(--fg)" : "var(--danger)") + '">' + esc(r.username) + '</span>' +
+                '</div>' +
+                '<div style="font-size:11px;color:var(--muted);text-transform:uppercase">' + esc(r.role || "") +
+                  ' · <span style="color:var(--primary)">' + esc(String(r.keyCount != null ? r.keyCount : 0)) + ' keys</span></div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="seller-balance">Balance <strong style="color:' + balColor + '">' + esc(bal) + '</strong>' + (disc ? ' · <span style="color:#a78bfa">-' + esc(String(disc)) + '%</span>' : '') + '</div>' +
+            '<div class="seller-actions compact-actions" onclick="event.stopPropagation()">' + actions + '</div>' +
+          '</div>'
+        );
+      }).join("");
+      renderBulkBar();
+    }
+
+    function renderBulkBar() {
+      var bar = document.getElementById("bulkSellerBar");
+      if (!bar) return;
+      if (!selected.size) { bar.innerHTML = ""; return; }
+      bar.innerHTML =
+        '<div class="card"><div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
+          '<strong>' + selected.size + ' selected</strong>' +
+          '<button class="btn btn-sm" type="button" onclick="bulkToggleActive(true)">▶ Activate</button>' +
+          '<button class="btn btn-sm" type="button" style="color:var(--warning)" onclick="bulkToggleActive(false)">⏸ Disable</button>' +
+          '<button class="btn btn-sm" type="button" onclick="selected.clear();renderSellers()">Clear</button>' +
+        '</div></div>';
+    }
+
+    function toggleSellerSelect(id, checked) {
+      if (checked) selected.add(id); else selected.delete(id);
+      renderSellers();
+    }
+    function toggleSelectAll() {
+      if (selected.size === sellers.length) selected.clear();
+      else sellers.forEach(function (s) { selected.add(s.id); });
+      renderSellers();
+    }
+
+    async function bulkToggleActive(active) {
+      var ids = Array.from(selected);
+      for (var i = 0; i < ids.length; i++) {
+        try { await api("/resellers/" + ids[i], { method: "PATCH", body: { isActive: active } }); }
+        catch (e) { showToast(e.message, "error"); }
+      }
+      showToast((active ? "Activated" : "Disabled") + " " + ids.length);
+      selected.clear();
+      loadResellers();
+    }
+
+    async function toggleActive(id, active, username) {
+      try {
+        await api("/resellers/" + id, { method: "PATCH", body: { isActive: active } });
+        showToast(username + (active ? " activated" : " disabled"));
+        loadResellers();
+      } catch (e) { showToast(e.message, "error"); }
+    }
+
+    async function editBalance(id, username, currentBdt) {
+      if (!isRulerUser) return;
+      var unitAns = prompt("Set absolute balance for " + username + "\n\nUnit:\n  1 = Taka\n  2 = Credit\n\nEnter 1 or 2:", "1");
+      if (unitAns === null) return;
+      var unit = (String(unitAns).trim() === "2") ? "CREDIT" : "BDT";
+      var curShow = unit === "CREDIT" ? (Number(currentBdt) / 100) : Number(currentBdt);
+      var v = prompt("New balance (" + (unit === "CREDIT" ? "credits" : "৳") + "):\nCurrent ≈ " + curShow, String(curShow));
+      if (v === null) return;
+      var bal = parseFloat(v);
+      if (isNaN(bal) || bal < 0) { showToast("Invalid balance", "error"); return; }
+      try {
+        var res = await api("/resellers/" + id + "/set-balance", { method: "POST", body: { balance: bal, unit: unit } });
+        showToast("Balance set to " + formatMoney(res.data.balance, "BDT"));
+        loadResellers();
+      } catch (e) { showToast(e.message, "error"); }
+    }
+
+
+    function closeZoom() {
+      var zc = document.getElementById("zoomContainer");
+      if (zc) zc.innerHTML = "";
+      var grid = document.getElementById("content");
+      if (grid) grid.hidden = false;
+    }
+    window.closeZoom = closeZoom;
+    window.zoomSeller = async function zoomSeller(id) {
+      var zc = document.getElementById("zoomContainer");
+      if (!zc) return;
+      zc.innerHTML = '<div class="card zoom-panel compact-zoom"><div class="card-body"><span class="spinner"></span> Loading…</div></div>';
+      var grid = document.getElementById("content");
+      if (grid) grid.hidden = true;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      try {
+        var res = await api("/resellers/" + encodeURIComponent(id) + "/zoom");
+        var d = res.data || {};
+        var u = d.user || d;
+        if (!u || !u.id) throw new Error("Seller not found");
+        var stats = d.stats || {
+          keyCount: (d.keys || []).length,
+          activeKeys: (d.keys || []).filter(function (k) { return k.status === "active"; }).length,
+          balance: Number(u.balance || 0)
+        };
+        var avatar = (u.avatarUrl && String(u.avatarUrl).trim()) ? u.avatarUrl : DEFAULT_AVATAR;
+        var active = u.isActive !== false;
+        var bal = formatMoney(Number(u.balance || stats.balance || 0), "BDT");
+
+        var PERM_LABELS = {
+          key_pause: "Pause",
+          key_resume: "Resume",
+          key_ban: "Ban",
+          key_unban: "Unban",
+          key_hwid_reset: "HWID reset",
+          key_unbind: "Unbind",
+          key_extend: "Extend",
+          key_reduce: "Reduce",
+          key_delete: "Delete key",
+          key_trial_create: "Trial create"
+        };
+        var curPerms = (u.permissions && typeof u.permissions === "object") ? u.permissions : {};
+        if (typeof curPerms === "string") {
+          try { curPerms = JSON.parse(curPerms); } catch (e3) { curPerms = {}; }
+        }
+
+        var permHtml = "";
+        if (isRulerUser) {
+          permHtml =
+            '<div class="zoom-section"><div class="zoom-sec-title">Permissions</div>' +
+            '<div class="perm-grid" id="permGrid">' +
+            Object.keys(PERM_LABELS).map(function (k) {
+              var on = curPerms[k] === true;
+              return '<label class="perm-chip' + (on ? " on" : "") + '">' +
+                '<input type="checkbox" data-perm="' + k + '"' + (on ? " checked" : "") + '> ' +
+                esc(PERM_LABELS[k]) + '</label>';
+            }).join("") +
+            '</div>' +
+            '<button class="btn btn-primary btn-sm" type="button" id="savePermBtn" style="margin-top:8px">Save permissions</button></div>';
+        }
+
+        d.keys = d.keys || [];
+        d.transactions = d.transactions || [];
+        d.keyLogs = d.keyLogs || [];
+        d.audits = d.audits || [];
+
+        var keysHtml = !d.keys.length
+          ? '<div class="empty-mini">No keys</div>'
+          : '<div class="zoom-list">' + d.keys.slice(0, 30).map(function (k) {
+              return '<div class="zoom-row">' +
+                '<a class="mono" href="key.html?id=' + encodeURIComponent(k.id) + '">' + esc(k.key) + '</a>' +
+                '<span class="badge badge-' + esc(k.status || "active") + '">' + esc(k.status || "") + '</span>' +
+                '<span class="muted">' + esc(k.modDisplayName || k.modName || "") + '</span>' +
+                '<span class="muted">' + esc(String(k.deviceCount != null ? k.deviceCount : 0)) + '/' + esc(String(k.access != null ? k.access : "—")) + '</span>' +
+              '</div>';
+            }).join("") + (d.keys.length > 30 ? '<div class="muted">+' + (d.keys.length - 30) + ' more</div>' : '') + '</div>';
+
+        var txnHtml = !d.transactions.length
+          ? '<div class="empty-mini">No transactions</div>'
+          : '<div class="zoom-list">' + d.transactions.slice(0, 15).map(function (tx) {
+              var amt = Number(tx.amount);
+              var col = amt >= 0 ? "var(--success)" : "var(--danger)";
+              return '<div class="zoom-row">' +
+                '<span>' + esc(tx.type || "") + '</span>' +
+                '<span style="color:' + col + ';font-weight:600">' + (amt >= 0 ? "+" : "") + esc(String(amt)) + '</span>' +
+                '<span class="muted">' + esc(formatDate(tx.createdAt)) + '</span>' +
+              '</div>';
+            }).join("") + '</div>';
+
+        function compactLog(items) {
+          if (!items || !items.length) return '<div class="empty-mini">None</div>';
+          return '<div class="zoom-list">' + items.slice(0, 12).map(function (l) {
+            var action = l.action || l.type || "event";
+            var when = formatDate(l.createdAt || l.timestamp);
+            var detail = l.details;
+            if (detail && typeof detail === "object") {
+              try { detail = JSON.stringify(detail); } catch (e) { detail = String(detail); }
+            }
+            detail = detail ? String(detail).slice(0, 100) : "";
+            return '<div class="zoom-row log-row">' +
+              '<span class="log-act">' + esc(action) + '</span>' +
+              '<span class="muted">' + esc(when) + '</span>' +
+              (detail ? '<span class="muted detail">' + esc(detail) + '</span>' : '') +
+            '</div>';
+          }).join("") + '</div>';
+        }
+
+        zc.innerHTML =
+          '<div class="card zoom-panel compact-zoom">' +
+            '<div class="zoom-head">' +
+              '<div class="zoom-identity">' +
+                '<img class="seller-avatar" src="' + esc(avatar) + '" alt="" onerror="this.onerror=null;this.src=DEFAULT_AVATAR">' +
+                '<div>' +
+                  '<div class="seller-name"><span class="seller-status-dot ' + (active ? "on" : "off") + '"></span> ' + esc(u.username) + '</div>' +
+                  '<div class="muted" style="font-size:11px;text-transform:uppercase">' + esc(u.role || "") +
+                    (u.password ? ' · pass <code class="mono">' + esc(String(u.password)) + '</code>' : '') +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+              '<button type="button" class="btn btn-sm" onclick="closeZoom()">Close</button>' +
+            '</div>' +
+            '<div class="card-body" style="padding-top:8px">' +
+              '<div class="zoom-stats">' +
+                '<div class="stat-pill"><div class="lbl">Balance</div><div class="val">' + esc(bal) + '</div></div>' +
+                '<div class="stat-pill"><div class="lbl">Keys</div><div class="val">' + esc(String(stats.keyCount || d.keys.length || 0)) + '</div></div>' +
+                '<div class="stat-pill green"><div class="lbl">Active</div><div class="val">' + esc(String(stats.activeKeys || 0)) + '</div></div>' +
+                '<div class="stat-pill"><div class="lbl">Login</div><div class="val" style="font-size:12px">' + esc(formatDate(u.lastLoginAt)) + '</div></div>' +
+              '</div>' +
+              '<div class="zoom-actions">' +
+                '<button class="btn btn-sm" type="button" style="color:var(--success)" onclick="rechargeReseller(\'' + esc(u.id) + '\',\'' + esc(u.username) + '\')">+ Balance</button>' +
+                '<button class="btn btn-sm" type="button" onclick="toggleActive(\'' + esc(u.id) + '\',' + (active ? "false" : "true") + ',\'' + esc(u.username) + '\')">' +
+                  (active ? "Disable" : "Activate") + '</button>' +
+                (isRulerUser
+                  ? '<button class="btn btn-sm" type="button" onclick="editBalance(\'' + esc(u.id) + '\',\'' + esc(u.username) + '\',' + Number(u.balance || 0) + ')">Edit bal</button>' +
+                    '<button class="btn btn-sm" type="button" onclick="setDiscount(\'' + esc(u.id) + '\',\'' + esc(u.username) + '\',' + Number(u.discountPercent || 0) + ')">Disc%</button>'
+                  : '') +
+                '<button class="btn btn-sm btn-danger btn-del-seller" type="button" data-id="' + esc(u.id) + '" data-username="' + esc(u.username) + '">Delete</button>' +
+              '</div>' +
+              permHtml +
+              '<div class="zoom-section"><div class="zoom-sec-title">Keys</div>' + keysHtml + '</div>' +
+              '<div class="zoom-section"><div class="zoom-sec-title">Wallet</div>' + txnHtml + '</div>' +
+              '<div class="zoom-section"><div class="zoom-sec-title">Key logs</div>' + compactLog(d.keyLogs) + '</div>' +
+              '<div class="zoom-section"><div class="zoom-sec-title">Audit</div>' + compactLog(d.audits) + '</div>' +
+            '</div>' +
+          '</div>';
+
+        var saveBtn = document.getElementById("savePermBtn");
+        if (saveBtn) {
+          saveBtn.onclick = async function () {
+            var permissions = {};
+            document.querySelectorAll("#permGrid input[data-perm]").forEach(function (inp) {
+              permissions[inp.getAttribute("data-perm")] = !!inp.checked;
+            });
+            try {
+              await api("/resellers/" + encodeURIComponent(id) + "/set-permissions", { method: "POST", body: { permissions: permissions } });
+              showToast("Permissions saved");
+              zoomSeller(id);
+            } catch (err) { showToast(err.message, "error"); }
+          };
+        }
+      } catch (e) {
+        zc.innerHTML = '<div class="card zoom-panel compact-zoom"><div class="card-body" style="color:var(--danger)">' +
+          esc(e.message || String(e)) +
+          ' <button class="btn btn-sm" type="button" onclick="closeZoom()">Close</button></div></div>';
+      }
+    }
+
+    function showCreateForm() {
+      document.getElementById("formContainer").innerHTML =
+        '<div class="card"><div class="card-header"><h2>Add Seller</h2></div><div class="card-body">' +
+          '<form id="createForm">' +
+            '<div class="form-row">' +
+              '<div class="form-group"><label>Username</label><input type="text" id="newUsername" required></div>' +
+              '<div class="form-group"><label>Password <span style="color:var(--muted);font-weight:400">(min 4)</span></label><input type="password" id="newPassword" required minlength="4" placeholder="Min 4 characters"></div>' +
+              '<div class="form-group"><label>Profile image URL</label><input type="url" id="newAvatar" placeholder="https://..."></div>' +
+            '</div>' +
+            '<button type="submit" class="btn btn-primary">Create</button> ' +
+            '<button type="button" class="btn" onclick="document.getElementById(\'formContainer\').innerHTML=\'\'">Cancel</button>' +
+          '</form></div></div>';
+      bindPasswordToggles(document.getElementById("formContainer"));
+      bindPasswordStrength(document.getElementById("formContainer"));
+      bindPasswordStrength(document.getElementById("formContainer"));
+      document.getElementById("createForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        try {
+          await api("/resellers", { method: "POST", body: {
+            username: document.getElementById("newUsername").value,
+            password: document.getElementById("newPassword").value,
+            avatarUrl: document.getElementById("newAvatar").value || undefined
+          }});
+          showToast("Created");
+          document.getElementById("formContainer").innerHTML = "";
+          loadResellers();
+        } catch (err) { showToast(err.message, "error"); }
+      });
+    }
+
+    async function rechargeReseller(id, username) {
+      var unitAns = prompt("Add balance for " + username + "\n\nUnit:\n  1 = Taka (৳)\n  2 = Credit (100৳ = 1 cr)\n\nEnter 1 or 2:", "1");
+      if (unitAns === null) return;
+      var unit = (String(unitAns).trim() === "2") ? "CREDIT" : "BDT";
+      var amount = prompt((unit === "CREDIT" ? "Credits to add:" : "Taka (৳) to add:") + "\n(Superadmin pays from own wallet)");
+      if (amount === null || amount === "") return;
+      var amt = parseFloat(amount);
+      if (!amt || amt <= 0) { showToast("Invalid amount", "error"); return; }
+      try {
+        var res = await api("/resellers/" + id + "/recharge", { method: "POST", body: { amount: amt, unit: unit } });
+        showToast("Recharged → " + formatMoney(res.data.balance, "BDT"));
+        try { var me = await api("/auth/me"); if (me.wallet) window.__wallet = me.wallet; } catch (e) {}
+        loadResellers();
+      } catch (e) { showToast(e.message, "error"); }
+    }
+
+    async function setDiscount(id, username, current) {
+      if (typeof isRuler === "function" && !isRuler()) { showToast("Ruler only", "error"); return; }
+      var v = prompt("Discount % for " + username + " (0–100)\nApplied on key purchase charge.\nCurrent: " + (current != null ? current : 0) + "%", String(current != null ? current : 0));
+      if (v === null) return;
+      var d = parseFloat(v);
+      if (isNaN(d) || d < 0 || d > 100) { showToast("Must be 0–100", "error"); return; }
+      try {
+        await api("/resellers/" + id + "/set-discount", { method: "POST", body: { discountPercent: d } });
+        showToast("Discount set to " + d + "%");
+        loadResellers();
+      } catch (e) { showToast(e.message, "error"); }
+    }
+
+    async function editReseller(id) {
+      try {
+        var res = await api("/resellers/" + id);
+        var r = res.data;
+        document.getElementById("formContainer").innerHTML =
+          '<div class="card"><div class="card-header"><h2>Edit: ' + esc(r.username) + '</h2></div><div class="card-body">' +
+            '<div style="font-size:13px;margin-bottom:14px;color:var(--muted)">' +
+              'Role: <strong style="color:var(--fg)">' + esc(r.role) + '</strong> · ' +
+              'Status: <strong style="color:' + (r.isActive !== false ? "var(--success)" : "var(--danger)") + '">' + (r.isActive !== false ? "Active" : "Disabled") + '</strong> · ' +
+              'Balance: <strong style="color:#facc15">৳' + esc(String(r.balance != null ? Number(r.balance).toFixed(0) : 0)) + '</strong><br>' +
+              'Created: ' + esc(formatDate(r.createdAt)) + ' · Last login: ' + esc(formatDate(r.lastLoginAt)) +
+            '</div>' +
+            '<form id="editForm">' +
+              '<div class="form-group"><label>Username</label><input type="text" id="editUsername" value="' + esc(r.username) + '"></div>' +
+              '<div class="form-group"><label>Password <span style="color:var(--muted);font-weight:400">(min 4 · plaintext)</span></label>' +
+                '<input type="password" id="editPassword" data-pw-toggle value="' + esc(r.password || "") + '" autocomplete="off" minlength="4">' +
+                '<div class="hint">👁 show · strength bar Weak→Secure · min 4 chars</div></div>' +
+              '<div class="form-group"><label>Profile image URL</label>' +
+                '<input type="url" id="editAvatar" value="' + esc(r.avatarUrl || "") + '" placeholder="https://...">' +
+                (r.avatarUrl ? '<div style="margin-top:8px"><img src="' + esc(r.avatarUrl) + '" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--border)" onerror="this.style.display=\'none\'"></div>' : '') +
+              '</div>' +
+              '<div class="form-group"><label>Active</label><select id="editActive">' +
+                '<option value="true"' + (r.isActive !== false ? " selected" : "") + '>Active</option>' +
+                '<option value="false"' + (r.isActive === false ? " selected" : "") + '>Disabled</option></select></div>' +
+              '<button type="submit" class="btn btn-primary">Save</button> ' +
+              '<button type="button" class="btn" onclick="document.getElementById(\'formContainer\').innerHTML=\'\'">Cancel</button>' +
+            '</form></div></div>';
+        bindPasswordToggles(document.getElementById("formContainer"));
+      bindPasswordStrength(document.getElementById("formContainer"));
+      bindPasswordStrength(document.getElementById("formContainer"));
+        document.getElementById("editForm").addEventListener("submit", async function (e) {
+          e.preventDefault();
+          var body = {
+            username: document.getElementById("editUsername").value.trim(),
+            isActive: document.getElementById("editActive").value === "true",
+            avatarUrl: document.getElementById("editAvatar").value.trim()
+          };
+          var pass = document.getElementById("editPassword").value;
+          if (pass) body.password = pass; // plaintext save
+          try {
+            await api("/resellers/" + id, { method: "PATCH", body: body });
+            showToast("Saved");
+            document.getElementById("formContainer").innerHTML = "";
+            loadResellers();
+          } catch (err) { showToast(err.message, "error"); }
+        });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } catch (e) { showToast(e.message, "error"); }
+    }
+
+    
+    async function promoteSeller(id, username, role) {
+      if (!isRulerUser) return;
+      var label = role === "superadmin" ? "promote " + username + " to Superadmin?" : "demote " + username + " to Reseller?";
+      if (!confirm(label)) return;
+      try {
+        await api("/resellers/" + encodeURIComponent(id), { method: "PATCH", body: { role: role } });
+        showToast(role === "superadmin" ? "Promoted to Superadmin" : "Demoted to Reseller");
+        loadSellers();
+      } catch (e) {
+        showToast(e.message || String(e), "error");
+      }
+    }
+
+    window.loadResellers = loadResellers;
+    window.showCreateForm = showCreateForm;
+    window.toggleSelectAll = toggleSelectAll;
+    window.bulkSetActive = bulkSetActive;
+    window.toggleActive = toggleActive;
+    window.editBalance = editBalance;
+    window.setDiscount = setDiscount;
+    window.rechargeReseller = rechargeReseller;
+    window.editReseller = editReseller;
+    window.promoteSeller = promoteSeller;
+    window.toggleSellerSelect = toggleSellerSelect;
+
+    window.deleteReseller = async function deleteReseller(id, username) {
+      if (!id) { showToast("Missing seller id", "error"); return; }
+      var label = username || id;
+      if (!confirm("HARD DELETE " + label + " and ALL their keys permanently? This cannot be undone.")) return;
+      showToast("Deleting " + label + "…");
+      var bases = [];
+      try { bases.push((typeof getApiBase === "function" ? getApiBase() : window.DFOX_API_BASE || "").replace(/\/$/, "")); } catch (e0) {}
+      bases.push("https://fox-store-api.onrender.com");
+      bases = bases.filter(function (b, i, a) { return b && a.indexOf(b) === i; });
+      var token = typeof getToken === "function" ? getToken() : (localStorage.getItem("dfox_token") || localStorage.getItem("token"));
+      var lastErr = "Delete failed";
+      for (var i = 0; i < bases.length; i++) {
+        try {
+          var r = await fetch(bases[i] + "/api/admin/resellers/" + encodeURIComponent(id), {
+            method: "DELETE",
+            headers: Object.assign({ "Content-Type": "application/json" }, token ? { Authorization: "Bearer " + token } : {}),
+            cache: "no-store"
+          });
+          var j = {};
+          try { j = await r.json(); } catch (e1) {}
+          if (!r.ok || j.ok === false) throw new Error(j.error || ("HTTP " + r.status));
+          showToast(label + " deleted" + (j.keysRemoved != null ? (" · " + j.keysRemoved + " keys") : ""), "success");
+          try { closeZoom(); } catch (e2) {}
+          loadResellers();
+          return;
+        } catch (e) {
+          lastErr = e.message || String(e);
+        }
+      }
+      showToast(lastErr, "error");
+    }
+  </script>
+</body>
+</html>

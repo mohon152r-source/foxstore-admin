@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' https: data:;
+  connect-src 'self' https: http://localhost:* http://127.0.0.1:*;
+">
+  <title>Purchase — Fox Store</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app" class="layout"></div>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    var state = { mods: [], packages: [] };
+
+    requireAuth();
+    document.addEventListener("auth-ready", function () {
+      boot().catch(function (e) {
+        console.error(e);
+        try {
+          mountShell("Purchase");
+          document.getElementById("page-content").innerHTML =
+            '<div class="alert alert-error">Failed to load: ' + esc(e.message || String(e)) + "</div>";
+        } catch (e2) {}
+      });
+    });
+
+    async function boot() {
+      try {
+        var _mr = await api("/mods?activeOnly=1");
+        state.mods = (_mr.data || []).filter(function (m) { return m.isActive !== false; });
+      } catch (e) {
+        state.mods = [];
+      }
+      renderForm();
+    }
+
+    function isRulerUser() {
+      return typeof isRuler === "function" && isRuler();
+    }
+
+    function renderForm() {
+      mountShell("Purchase");
+      var root = document.getElementById("page-content");
+      if (!root) return;
+
+      var ruler = isRulerUser();
+      var canTrial = ruler || (typeof hasPerm === "function" && hasPerm("key_trial_create"));
+
+      root.innerHTML =
+        '<a href="keys.html" style="font-size:13px;color:var(--muted)">← Keys</a>' +
+        '<div class="page-header">' +
+          "<div><h1>Purchase</h1><p>Pick app &amp; package. Charge = price × devices × quantity.</p></div>" +
+        "</div>" +
+        '<div class="card"><div class="card-body">' +
+          '<div class="form-row">' +
+            '<div class="form-group"><label>App</label>' +
+              '<select id="modSelect">' +
+                '<option value="">— Select —</option>' +
+                state.mods.map(function (m) {
+                  return '<option value="' + esc(m.name) + '" data-id="' + esc(m.id) + '" data-prefix="' + esc(m.defaultKeyPrefix || m.keyPrefix || '') + '">' +
+                    esc(m.displayName || m.name) + "</option>";
+                }).join("") +
+              "</select></div>" +
+            '<div class="form-group"><label>Package</label>' +
+              '<select id="packageSelect"><option value="">— Select app first —</option></select>' +
+              '<div class="hint" id="packageHint"></div></div>' +
+          "</div>" +
+
+          (canTrial
+            ? ('<div class="form-group"><label>Key mode</label>' +
+                '<div class="mode-radios" id="keyModeRadios">' +
+                  '<label class="is-on"><input type="radio" name="keyMode" value="regular" checked> Regular</label>' +
+                  '<label><input type="radio" name="keyMode" value="trial"> Activate on login</label>' +
+                "</div>" +
+                '<div class="hint">Regular = paid package. Trial = free trial duration (separate table).</div></div>' +
+                '<div class="form-group" id="trialDurationGroup" style="display:none">' +
+                  "<label>Trial duration</label>" +
+                  '<select id="trialDuration">' +
+                    '<option value="30m">30 minutes</option><option value="1h">1 hour</option>' +
+                    '<option value="6h">6 hours</option><option value="12h">12 hours</option>' +
+                    '<option value="1d">1 day</option><option value="3d">3 days</option>' +
+                    '<option value="7d" selected>7 days</option><option value="30d">30 days</option>' +
+                    '<option value="custom">Custom…</option>' +
+                  "</select>" +
+                  '<input type="text" id="trialDurationCustom" placeholder="e.g. 12h or 5d" style="display:none;margin-top:8px">' +
+                "</div>")
+            : ('<div class="form-group"><label>Key mode</label>' +
+                '<div class="purchase-summary" style="margin:0">' +
+                  "<strong>Activate on login</strong> — package required (not changeable)" +
+                "</div></div>")) +
+
+          '<div class="form-row">' +
+            '<div class="form-group"><label>Max devices</label>' +
+              '<input type="number" id="access" value="1" min="1" max="9999"></div>' +
+            '<div class="form-group"><label>Quantity</label>' +
+              '<input type="number" id="count" value="1" min="1" max="100"></div>' +
+          "</div>" +
+
+          '<div class="form-group"><label>Key name <span style="color:var(--muted);font-weight:400">(optional)</span></label>' +
+            '<input type="text" id="keyName" placeholder="Empty = auto · one key = exact · batch = prefix" maxlength="64">' +
+            '<div class="hint" id="keyNameHint">Default prefix: <code>HQCRX-BLUEWHALE</code> (or app default). Batch uses name as prefix.</div></div>' +
+
+          '<div class="form-row">' +
+            '<div class="form-group"><label>Customer (optional)</label>' +
+              '<input type="text" id="customerName" placeholder="Name"></div>' +
+            '<div class="form-group"><label>Note (optional)</label>' +
+              '<input type="text" id="customerNote" placeholder="Internal note"></div>' +
+          "</div>" +
+
+          '<div class="purchase-summary" id="chargeSummary">Select a package to see charge.</div>' +
+          '<button type="button" class="btn btn-primary btn-block" id="submitBtn" style="margin-top:14px">Purchase</button>' +
+          '<div id="resultBox" style="margin-top:14px"></div>' +
+        "</div></div>";
+
+      document.getElementById("modSelect").addEventListener("change", loadPackages);
+      document.getElementById("packageSelect").addEventListener("change", updateSummary);
+      document.getElementById("access").addEventListener("input", updateSummary);
+      document.getElementById("count").addEventListener("input", updateSummary);
+      document.getElementById("submitBtn").addEventListener("click", generateKeys);
+
+      document.querySelectorAll('input[name="nameMode"]').forEach(function (el) {
+        el.addEventListener("change", onNameModeChange);
+      });
+      onNameModeChange();
+
+      if (ruler) {
+        document.querySelectorAll('input[name="keyMode"]').forEach(function (el) {
+          el.addEventListener("change", onKeyModeChange);
+        });
+        var td = document.getElementById("trialDuration");
+        if (td) {
+          td.addEventListener("change", function () {
+            var c = document.getElementById("trialDurationCustom");
+            if (c) c.style.display = this.value === "custom" ? "" : "none";
+          });
+        }
+        onKeyModeChange();
+      }
+
+      // deep-link ?modId=&packageId=
+      try {
+        var qp = new URLSearchParams(location.search);
+        var qMod = qp.get("modId");
+        var qPkg = qp.get("packageId");
+        if (qMod) {
+          var sel = document.getElementById("modSelect");
+          for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].getAttribute("data-id") === qMod) {
+              sel.selectedIndex = i;
+              break;
+            }
+          }
+          loadPackages().then(function () {
+            if (qPkg) {
+              document.getElementById("packageSelect").value = qPkg;
+              updateSummary();
+            }
+          });
+        }
+      } catch (e) {}
+    }
+
+    function getKeyMode() {
+      var canTrial = isRulerUser() || (typeof hasPerm === "function" && hasPerm("key_trial_create"));
+      if (!canTrial) return "regular"; // sellers: package + activate-on-login, no type picker
+      var checked = document.querySelector('input[name="keyMode"]:checked');
+      return checked ? checked.value : "regular";
+    }
+
+    function onKeyModeChange() {
+      var mode = getKeyMode();
+      var tg = document.getElementById("trialDurationGroup");
+      if (tg) tg.style.display = mode === "trial" ? "" : "none";
+      var pkg = document.getElementById("packageSelect");
+      if (pkg) {
+        pkg.disabled = mode === "trial";
+        if (mode === "trial") pkg.value = "";
+      }
+      document.querySelectorAll("#keyModeRadios label").forEach(function (lab) {
+        var inp = lab.querySelector("input");
+        if (inp) lab.classList.toggle("is-on", inp.checked);
+      });
+      updateSummary();
+    }
+
+    function onNameModeChange() {
+      var mode = (document.querySelector('input[name="nameMode"]:checked') || {}).value || "auto";
+      var pg = document.getElementById("prefixGroup");
+      var cg = document.getElementById("customKeyGroup");
+      if (pg) pg.style.display = mode === "prefix" ? "" : "none";
+      if (cg) cg.style.display = mode === "custom" ? "" : "none";
+      var countEl = document.getElementById("count");
+      if (countEl) {
+        if (mode === "custom") {
+          countEl.value = "1";
+          countEl.disabled = true;
+        } else {
+          countEl.disabled = false;
+        }
+      }
+      document.querySelectorAll("#nameModeRadios label").forEach(function (lab) {
+        var inp = lab.querySelector("input");
+        if (inp) lab.classList.toggle("is-on", inp.checked);
+      });
+    }
+
+    async function loadPackages() {
+      var modName = document.getElementById("modSelect").value;
+      var sel = document.getElementById("packageSelect");
+      state.packages = [];
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Loading…</option>';
+      if (!modName) {
+        sel.innerHTML = '<option value="">— Select app first —</option>';
+        updateSummary();
+        return;
+      }
+      try {
+        var res = await api("/packages?modName=" + encodeURIComponent(modName));
+        state.packages = res.data || [];
+        if (!state.packages.length) {
+          sel.innerHTML = '<option value="">No packages</option>';
+        } else {
+          sel.innerHTML = '<option value="">— Select —</option>' + state.packages.map(function (p) {
+            var priceLabel = (typeof formatMoney === "function") ? formatMoney(p.price) : ("৳" + p.price);
+            return '<option value="' + esc(p.id) + '" data-price="' + esc(String(p.price)) + '" data-duration="' + esc(p.duration || "") + '">' +
+              esc(p.name || p.duration || "Package") + " · " + priceLabel +
+              "</option>";
+          }).join("");
+        }
+      } catch (e) {
+        sel.innerHTML = '<option value="">Error</option>';
+        if (typeof showToast === "function") showToast(e.message, "error");
+      }
+      updateSummary();
+    }
+
+    function defaultPrefixForMod() {
+      var modSel = document.getElementById("modSelect");
+      var opt = modSel && modSel.selectedOptions && modSel.selectedOptions[0];
+      var p = opt && opt.getAttribute("data-prefix");
+      return (p && p.trim()) || "HQCRX-BLUEWHALE";
+    }
+    function updateSummary() {
+      var box = document.getElementById("chargeSummary");
+      if (!box) return;
+      var mode = getKeyMode();
+      if (mode === "trial") {
+        box.innerHTML = "<strong>Trial / Activate on login</strong> — no wallet charge (Ruler).";
+        return;
+      }
+      var opt = document.getElementById("packageSelect") && document.getElementById("packageSelect").selectedOptions[0];
+      if (!opt || !opt.value) {
+        box.innerHTML = "Select a package to see charge.";
+        return;
+      }
+      var list = Number(opt.getAttribute("data-price") || 0);
+      var access = Math.max(1, parseInt((document.getElementById("access") || {}).value, 10) || 1);
+      var count = Math.max(1, parseInt((document.getElementById("count") || {}).value, 10) || 1);
+      var payUnit = (typeof afterDiscountBdt === "function") ? afterDiscountBdt(list) : list;
+      var total = payUnit * access * count;
+      var d = (typeof userDiscountPercent === "function") ? userDiscountPercent() : 0;
+      var unitHtml = (typeof formatPriceHtml === "function") ? formatPriceHtml(list) : esc(String(list));
+      var totalHtml = (typeof formatMoney === "function") ? formatMoney(total) : String(total);
+      box.innerHTML =
+        "Unit " + unitHtml +
+        " × " + access + " device(s) × " + count +
+        " = <strong>" + esc(totalHtml) + "</strong>" +
+        (d > 0 ? ' <span class="price-disc">-' + d + "%</span>" : "");
+    }
+
+    async function generateKeys() {
+      var btn = document.getElementById("submitBtn");
+      var resultBox = document.getElementById("resultBox");
+      if (!btn) return;
+
+      var modSel = document.getElementById("modSelect");
+      var modName = modSel ? modSel.value : "";
+      var modOpt = modSel && modSel.selectedOptions[0];
+      var modId = modOpt ? (modOpt.getAttribute("data-id") || "") : "";
+      var packageId = (document.getElementById("packageSelect") || {}).value || "";
+      var mode = getKeyMode();
+      var access = parseInt((document.getElementById("access") || {}).value, 10) || 1;
+      var count = parseInt((document.getElementById("count") || {}).value, 10) || 1;
+      var keyName = ((document.getElementById("keyName") || {}).value || "").trim();
+
+      if (!modName) {
+        if (typeof showToast === "function") showToast("Select an app", "error");
+        return;
+      }
+
+      var body = {
+        mod: modName,
+        modName: modName,
+        modId: modId || undefined,
+        access: access,
+        count: (keyName && count === 1) ? 1 : count,
+        customerName: ((document.getElementById("customerName") || {}).value || "").trim() || undefined,
+        customerNote: ((document.getElementById("customerNote") || {}).value || "").trim() || undefined
+      };
+
+      // Sellers: always paid package keys (regular). Mode label is Activate on login (fixed).
+      // Ruler: regular (package) or trial (activate on login, free).
+      if (mode === "trial") {
+        body.keyType = "trial";
+        var td = document.getElementById("trialDuration");
+        body.trialDuration = td && td.value === "custom"
+          ? ((document.getElementById("trialDurationCustom") || {}).value || "").trim()
+          : (td ? td.value : "7d");
+      } else {
+        body.keyType = "regular";
+        if (!packageId) {
+          if (typeof showToast === "function") showToast("Select a package", "error");
+          return;
+        }
+        body.packageId = packageId;
+      }
+
+      if (keyName) {
+        if (count <= 1) {
+          body.key = keyName;
+          body.count = 1;
+        } else {
+          body.keyPrefix = keyName;
+        }
+      } else {
+        body.keyPrefix = defaultPrefixForMod();
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Purchasing…';
+      if (resultBox) resultBox.innerHTML = "";
+
+      try {
+        var res = await api("/keys", { method: "POST", body: body });
+
+        // Refresh wallet without destroying the form (mountShell caused black screen)
+        try {
+          var me = await api("/auth/me");
+          if (me.wallet) window.__wallet = me.wallet;
+          if (me.user) window.__user = Object.assign(window.__user || {}, me.user);
+          var balEl = document.querySelector(".balance-value");
+          if (balEl && me.wallet && typeof formatMoney === "function") {
+            balEl.textContent = formatMoney(me.wallet.balance);
+          }
+        } catch (e2) {}
+
+        var keys = res.data || res.keys || [];
+        if (!Array.isArray(keys)) keys = keys && keys.key ? [keys] : [];
+        var charged = res.charged != null ? res.charged : (res.walletCharge != null ? res.walletCharge : null);
+        var html = '<div class="alert alert-success">Purchased ' + keys.length + " key(s)" +
+          (charged != null && typeof formatMoney === "function" ? " · charged " + formatMoney(charged) : "") +
+          "</div>";
+        if (keys.length) {
+          html += '<div class="card" style="margin-top:10px"><div class="card-body mono" style="font-size:13px">' +
+            keys.map(function (k) {
+              var keyStr = typeof k === "string" ? k : (k.key || String(k));
+              return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">' +
+                "<span>" + esc(keyStr) + "</span>" +
+                '<button type="button" class="btn btn-sm" data-copy="' + esc(keyStr) + '">Copy</button></div>';
+            }).join("") + "</div></div>";
+        }
+        if (resultBox) {
+          resultBox.innerHTML = html;
+          resultBox.querySelectorAll("[data-copy]").forEach(function (b) {
+            b.addEventListener("click", function () {
+              copyToClipboard(b.getAttribute("data-copy"));
+            });
+          });
+        }
+        if (typeof showToast === "function") showToast("Done");
+      } catch (e) {
+        if (typeof showToast === "function") showToast(e.message || String(e), "error");
+        if (resultBox) {
+          resultBox.innerHTML = '<div class="alert alert-error">' + esc(e.message || String(e)) + "</div>";
+        }
+      }
+      btn.disabled = false;
+      btn.textContent = "Purchase";
+    }
+  </script>
+</body>
+</html>

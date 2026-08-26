@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' https: data:;
+  connect-src 'self' https: http://localhost:* http://127.0.0.1:*;
+">
+  <title>Audit — Fox Store</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app" class="layout"></div>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    var page = 1;
+    requireAuth();
+    document.addEventListener("auth-ready", function () {
+      mountShell("Logs");
+      document.getElementById("page-content").innerHTML =
+        '<div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">' +
+          '<div><h1>Audit log</h1><p id="count">Loading…</p></div>' +
+          '<button class="btn btn-sm" type="button" onclick="page=1;loadAudit()">↻ Refresh</button>' +
+        '</div>' +
+        '<div class="log-list" id="content"><div class="empty"><span class="spinner"></span></div></div>' +
+        '<div class="pagination" id="pagination" style="margin-top:16px"></div>';
+      loadAudit();
+    });
+
+    async function loadAudit() {
+      try {
+        var res = await api("/audit?page=" + page + "&pageSize=50");
+        var items = res.data || [];
+        var total = (res.pagination && res.pagination.total) || items.length;
+        document.getElementById("count").textContent = total + " entr" + (total === 1 ? "y" : "ies");
+        if (!items.length) {
+          document.getElementById("content").innerHTML = '<div class="empty">No audit entries yet.</div>';
+        } else {
+          document.getElementById("content").innerHTML = items.map(function (a) {
+            var chips = [];
+            if (a.ip) chips.push({ label: "IP", value: a.ip });
+            if (a.adminId) chips.push({ label: "admin", value: String(a.adminId).slice(0, 8) });
+            if (a.keyId) chips.push({ label: "key", value: String(a.keyId).slice(0, 8) });
+            var detail = null;
+            if (a.details) {
+              try {
+                detail = typeof a.details === "string" ? a.details : JSON.stringify(a.details);
+                if (detail.length > 200) detail = detail.slice(0, 200) + "…";
+              } catch (e) { detail = String(a.details); }
+            }
+            return renderLogCard({
+              action: a.action || "event",
+              time: formatDate(a.createdAt),
+              chips: chips,
+              detail: detail
+            });
+          }).join("");
+        }
+        var pages = (res.pagination && res.pagination.totalPages) || 1;
+        document.getElementById("pagination").innerHTML = pages > 1
+          ? '<span style="color:var(--muted);font-size:13px">Page ' + page + ' of ' + pages + '</span>' +
+            '<div style="display:flex;gap:8px">' +
+              '<button class="btn btn-sm" type="button" ' + (page === 1 ? "disabled" : "") + ' onclick="page--;loadAudit()">Previous</button>' +
+              '<button class="btn btn-sm" type="button" ' + (page >= pages ? "disabled" : "") + ' onclick="page++;loadAudit()">Next</button>' +
+            '</div>'
+          : "";
+      } catch (err) {
+        document.getElementById("content").innerHTML =
+          '<div class="alert alert-error">' + esc(err.message || String(err)) + '</div>';
+      }
+    }
+  </script>
+</body>
+</html>

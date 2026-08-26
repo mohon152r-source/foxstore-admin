@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' https: data:;
+  connect-src 'self' https: http://localhost:* http://127.0.0.1:*;
+">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta name="referrer" content="no-referrer">
+  <title>Fox Store — Login</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <div class="logo" id="brandLogoWrap">F</div>
+      <h1 id="brandTitle">Fox Store</h1>
+      <p id="brandSub">License & key control panel</p>
+      <div id="error" class="alert alert-error" style="display:none"></div>
+      <div id="forgotPanel" style="display:none;margin-bottom:14px">
+        <div class="form-group"><label>Username</label><input type="text" id="fpUser" autocomplete="username"></div>
+        <div class="form-group" id="fpOtpGroup" style="display:none"><label>OTP from Telegram</label><input type="text" id="fpOtp" inputmode="numeric" maxlength="6"></div>
+        <div class="form-group" id="fpPassGroup" style="display:none"><label>New password</label><input type="password" id="fpPass" minlength="4"></div>
+        <button type="button" class="btn btn-primary btn-block" id="fpBtn">Send OTP</button>
+        <button type="button" class="btn btn-block" id="fpBack" style="margin-top:8px">Back to login</button>
+      </div>
+      <form id="loginForm" autocomplete="on">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required autocomplete="username" spellcheck="false" placeholder="Your username">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password" minlength="4" placeholder="Min 4 characters">
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:0 0 14px;cursor:pointer">
+          <input type="checkbox" id="rememberMe" style="width:auto;margin:0" checked>
+          Remember for fast login
+        </label>
+        <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Sign in</button>
+        <p id="apiHint" style="font-size:11px;color:var(--muted);text-align:center;margin:10px 0 0;word-break:break-all"></p>
+        <p id="shakeHint" style="font-size:11px;color:var(--muted);text-align:center;margin:12px 0 0;display:none">
+          📱 Shake phone to clear saved login
+        </p>
+      </form>
+      <button type="button" class="btn btn-block" id="forgotOpen" style="margin-top:10px">Forgot password (Telegram OTP)</button>
+    </div>
+  </div>
+  <script src="js/config.js?v=stable1">
+    (function () {
+      var panel = document.getElementById("forgotPanel");
+      var form = document.getElementById("loginForm");
+      var openBtn = document.getElementById("forgotOpen");
+      var backBtn = document.getElementById("fpBack");
+      var fpBtn = document.getElementById("fpBtn");
+      var step = 1;
+      if (openBtn) openBtn.onclick = function () {
+        if (panel) panel.style.display = "";
+        if (form) form.style.display = "none";
+        if (openBtn) openBtn.style.display = "none";
+        step = 1;
+        if (fpBtn) fpBtn.textContent = "Send OTP";
+        var g1 = document.getElementById("fpOtpGroup");
+        var g2 = document.getElementById("fpPassGroup");
+        if (g1) g1.style.display = "none";
+        if (g2) g2.style.display = "none";
+      };
+      if (backBtn) backBtn.onclick = function () {
+        if (panel) panel.style.display = "none";
+        if (form) form.style.display = "";
+        if (openBtn) openBtn.style.display = "";
+      };
+      if (fpBtn) fpBtn.onclick = async function () {
+        var user = (document.getElementById("fpUser") || {}).value || "";
+        user = String(user).trim();
+        if (!user) { showToast && showToast("Username required", "error"); return; }
+        var root = (typeof getApiBase === "function" ? getApiBase() : (window.DFOX_API_BASE || "")).replace(/\/$/, "");
+        fpBtn.disabled = true;
+        try {
+          if (step === 1) {
+            var r = await fetch(root + "/api/admin/auth/forgot-password", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username: user })
+            });
+            var j = await r.json().catch(function () { return {}; });
+            if (!r.ok || j.ok === false) throw new Error(j.error || "Failed");
+            showToast && showToast("OTP sent to Telegram");
+            step = 2;
+            document.getElementById("fpOtpGroup").style.display = "";
+            document.getElementById("fpPassGroup").style.display = "";
+            fpBtn.textContent = "Reset password";
+          } else {
+            var otp = (document.getElementById("fpOtp") || {}).value || "";
+            var pass = (document.getElementById("fpPass") || {}).value || "";
+            var r2 = await fetch(root + "/api/admin/auth/reset-password", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username: user, otp: otp, newPassword: pass })
+            });
+            var j2 = await r2.json().catch(function () { return {}; });
+            if (!r2.ok || j2.ok === false) throw new Error(j2.error || "Failed");
+            showToast && showToast("Password updated — login now");
+            if (backBtn) backBtn.onclick();
+          }
+        } catch (e) {
+          showToast && showToast(e.message || "Failed", "error");
+        }
+        fpBtn.disabled = false;
+      };
+    })();
+
+  </script>
+  <script src="js/app.js?v=stable1"></script>
+  <script>
+    var CRED_KEY = "dfox_login_creds";
+
+    function apiRoot() {
+      try {
+        if (typeof getApiBase === "function") return String(getApiBase()).replace(/\/$/, "");
+        if (window.DFOX_API_BASE) return String(window.DFOX_API_BASE).replace(/\/$/, "");
+      } catch (e) {}
+      return "https://mod.dfox404.workers.dev";
+    }
+
+    // Force clean primary if previous experiments left bad state
+    try {
+      var b = apiRoot();
+      if (!b || /onrender\.com/i.test(b)) {
+        if (typeof setApiBase === "function") setApiBase("primary");
+      }
+    } catch (e) {}
+
+    function showErr(msg) {
+      var errDiv = document.getElementById("error");
+      if (!errDiv) { alert(msg); return; }
+      errDiv.textContent = msg;
+      errDiv.style.display = "block";
+    }
+
+    function hideErr() {
+      var errDiv = document.getElementById("error");
+      if (errDiv) errDiv.style.display = "none";
+    }
+
+    // Branding (non-blocking)
+    (async function loadBrand() {
+      try {
+        var res = await fetch(apiRoot() + "/api/admin/settings", { cache: "no-store" });
+        var st = await res.json();
+        var d = (st && st.data) || {};
+        var name = d.brand_name;
+        if (typeof name !== "string") name = (name != null ? String(name) : "Fox Store");
+        // unwrap JSON quotes
+        if (name.charAt(0) === '"') {
+          try { name = JSON.parse(name); } catch (e) {}
+        }
+        var logo = d.brand_logo_url;
+        if (typeof logo !== "string") logo = logo != null ? String(logo) : "";
+        if (logo.charAt(0) === '"') {
+          try { logo = JSON.parse(logo); } catch (e) {}
+        }
+        var title = document.getElementById("brandTitle");
+        if (title) title.textContent = name || "Fox Store";
+        var wrap = document.getElementById("brandLogoWrap");
+        if (wrap && logo) {
+          wrap.innerHTML = '<img src="' + logo.replace(/"/g, "") + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.remove()">';
+        }
+      } catch (e) { /* ignore */ }
+    })();
+
+    function saveCreds(u, p) {
+      try {
+        if (document.getElementById("rememberMe").checked) {
+          localStorage.setItem(CRED_KEY, JSON.stringify({ u: u, p: p }));
+        } else {
+          localStorage.removeItem(CRED_KEY);
+        }
+      } catch (e) {}
+    }
+    function loadSavedCreds() {
+      try {
+        var raw = localStorage.getItem(CRED_KEY);
+        if (!raw) return;
+        var c = JSON.parse(raw);
+        if (c && c.u) document.getElementById("username").value = c.u;
+        if (c && c.p) document.getElementById("password").value = c.p;
+      } catch (e) {}
+    }
+    function clearCreds() {
+      try { localStorage.removeItem(CRED_KEY); } catch (e) {}
+      document.getElementById("username").value = "";
+      document.getElementById("password").value = "";
+    }
+
+    // Already logged in?
+    if (typeof getToken === "function" && getToken()) {
+      (typeof checkAuth === "function" ? checkAuth() : Promise.resolve(null)).then(function (user) {
+        if (user) window.location.replace("dashboard.html");
+        else if (typeof clearToken === "function") clearToken();
+      });
+    }
+
+    loadSavedCreds();
+    try { if (typeof bindPasswordToggles === "function") bindPasswordToggles(document); } catch (e) {}
+    try { if (typeof bindPasswordStrength === "function") bindPasswordStrength(document); } catch (e) {}
+
+    var hint = document.getElementById("apiHint");
+    if (hint) hint.textContent = "API: " + apiRoot();
+
+    document.getElementById("loginForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var btn = document.getElementById("submitBtn");
+      var username = document.getElementById("username").value.trim();
+      var password = document.getElementById("password").value;
+      if (!username) { showErr("Username required"); return; }
+      if (password.length < 4) { showErr("Password must be at least 4 characters"); return; }
+
+      btn.disabled = true;
+      btn.textContent = "Signing in...";
+      hideErr();
+
+      var url = apiRoot() + "/api/admin/auth/login";
+      try {
+        var ctrl = new AbortController();
+        var timer = setTimeout(function () { ctrl.abort(); }, 20000);
+        var res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: username, password: password }),
+          cache: "no-store",
+          signal: ctrl.signal
+        });
+        clearTimeout(timer);
+        var data = {};
+        try { data = await res.json(); } catch (e) { data = {}; }
+
+        if (data.ok && data.token) {
+          if (typeof setToken === "function") setToken(data.token);
+          if (typeof setUser === "function") setUser(data.user);
+          saveCreds(username, password);
+          window.location.replace("dashboard.html");
+          return;
+        }
+        showErr(data.error || ("Login failed (HTTP " + res.status + ")"));
+      } catch (err) {
+        if (err && err.name === "AbortError") {
+          showErr("Timeout — server not responding. API: " + apiRoot());
+        } else {
+          showErr("Network error: " + (err.message || err) + " · " + apiRoot());
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Sign in";
+      }
+    });
+  </script>
+</body>
+</html>
