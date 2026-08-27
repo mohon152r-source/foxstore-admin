@@ -14,55 +14,40 @@
   <link rel="stylesheet" href="css/style.css">
   <style>
     .app-picker {
-      display: flex; 
-      flex-wrap: wrap; 
-      gap: 8px; 
-      margin-bottom: 16px;
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
     }
     .app-chip {
-      display: inline-flex; 
-      align-items: center; 
-      gap: 8px;
-      padding: 8px 14px; 
-      border-radius: 999px;
-      border: 1px solid var(--border); 
-      background: var(--card);
-      color: var(--fg); 
-      font-size: 13px; 
-      font-weight: 550;
-      cursor: pointer; 
-      transition: border-color 0.15s, background 0.15s;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 14px; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--card);
+      color: var(--fg); font-size: 13px; font-weight: 550;
+      cursor: pointer; transition: border-color 0.15s, background 0.15s;
     }
     .app-chip:hover { border-color: var(--primary); }
     .app-chip.active {
-      background: rgba(99, 102, 241, 0.1);
+      background: var(--primary-soft);
       border-color: var(--primary);
-      color: var(--primary);
+      color: #c4b5fd;
+    }
+    .app-chip img {
+      width: 22px; height: 22px; border-radius: 6px; object-fit: cover;
     }
     .pkg-panel {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: var(--radius);
       overflow: hidden;
-      margin-bottom: 14px;
     }
     .pkg-panel-head {
-      display: flex; 
-      flex-wrap: wrap; 
-      align-items: center;
-      justify-content: space-between; 
-      gap: 10px;
-      padding: 14px 16px; 
-      border-bottom: 1px solid var(--border);
+      display: flex; flex-wrap: wrap; align-items: center;
+      justify-content: space-between; gap: 10px;
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
     }
     .pkg-panel-head h2 { margin: 0; font-size: 15px; font-weight: 650; }
     .pkg-list { display: flex; flex-direction: column; }
     .pkg-item {
-      display: flex; 
-      align-items: center; 
-      justify-content: space-between;
-      gap: 12px; 
-      flex-wrap: wrap;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
       padding: 14px 16px;
       border-bottom: 1px solid var(--border);
     }
@@ -71,29 +56,13 @@
     .pkg-name { font-weight: 650; font-size: 14px; }
     .pkg-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
     .pkg-price {
-      font-weight: 750; 
-      color: #facc15; 
-      font-size: 15px;
-      font-variant-numeric: tabular-nums; 
-      min-width: 72px; 
-      text-align: right;
+      font-weight: 750; color: #facc15; font-size: 15px;
+      font-variant-numeric: tabular-nums; min-width: 72px; text-align: right;
     }
     .pkg-actions { display: flex; flex-wrap: wrap; gap: 6px; }
     .edit-form {
-      background: var(--bg); 
-      border: 1px solid var(--border);
-      border-radius: 8px; 
-      padding: 14px; 
-      margin-bottom: 14px;
-    }
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    @media (max-width: 600px) {
-      .form-row { grid-template-columns: 1fr; }
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px; margin-bottom: 14px;
     }
   </style>
 </head>
@@ -114,17 +83,15 @@
           '<div class="alert alert-error">Pricing management is Ruler only.</div>';
         return;
       }
-      
       mountShell("Apps");
       document.getElementById("page-content").innerHTML =
         '<div class="page-header">' +
-          '<div><h1>Manage Pricing</h1><p>Select an app to manage its packages</p></div>' +
+          '<div><h1>Manage pricing</h1><p>Select an app, then edit its packages — no horizontal scroll.</p></div>' +
           '<a class="btn" href="mods.html">← Apps</a>' +
         '</div>' +
         '<div id="appPicker" class="app-picker"><span class="spinner"></span></div>' +
         '<div id="formContainer"></div>' +
         '<div id="content"><div class="empty">Select an app above.</div></div>';
-      
       await loadApps();
     });
 
@@ -133,139 +100,109 @@
         var res = await api("/mods");
         mods = res.data || [];
         var picker = document.getElementById("appPicker");
-        
         if (!mods.length) {
-          picker.innerHTML = '<div class="empty">No apps yet. <a href="mods.html">Create one →</a></div>';
+          picker.innerHTML = '<div class="empty">No apps yet.</div>';
           return;
         }
-        
         picker.innerHTML = mods.map(function (m) {
-          var initial = (m.displayName || m.name || "?").charAt(0).toUpperCase();
           var logo = m.logoUrl
-            ? '<img src="' + esc(m.logoUrl) + '" alt="" style="width:22px;height:22px;border-radius:6px;object-fit:cover">'
-            : '<span style="width:22px;height:22px;border-radius:6px;background:var(--primary);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff">' + initial + '</span>';
-          
+            ? '<img src="' + esc(m.logoUrl) + '" alt="">'
+            : '<span style="width:22px;height:22px;border-radius:6px;background:var(--primary);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff">' +
+                esc((m.displayName || m.name || "?").charAt(0).toUpperCase()) + "</span>";
           return (
-            '<button type="button" class="app-chip" data-mod-id="' + esc(m.id) + '" onclick="selectApp(\'' + esc(m.id) + '\')">' +
+            '<button type="button" class="app-chip' + (selectedModId === m.id ? " active" : "") +
+              '" onclick="selectApp(\'' + esc(m.id) + '\')">' +
               logo + esc(m.displayName || m.name) +
-            '</button>'
+            "</button>"
           );
         }).join("");
 
-        // Auto-select from URL or first app
+        // Auto-select from ?modId= or first app
         var q = new URLSearchParams(location.search).get("modId");
-        if (q && mods.some(function (m) { return String(m.id) === q; })) {
-          selectApp(q);
-        } else if (mods[0]) {
-          selectApp(mods[0].id);
-        }
+        if (q && mods.some(function (m) { return m.id === q; })) selectApp(q);
+        else if (mods[0]) selectApp(mods[0].id);
       } catch (e) {
         document.getElementById("appPicker").innerHTML =
-          '<div class="alert alert-error">' + esc(e.message) + '</div>';
+          '<div class="alert alert-error">' + esc(e.message) + "</div>";
       }
     }
 
     function selectApp(id) {
       selectedModId = id;
-      
-      // Update UI
       document.querySelectorAll(".app-chip").forEach(function (el) {
-        el.classList.toggle("active", el.getAttribute("data-mod-id") === String(id));
+        el.classList.toggle("active", el.getAttribute("onclick").indexOf(id) !== -1);
       });
-      
       document.getElementById("formContainer").innerHTML = "";
       loadPackages();
     }
 
     async function loadPackages() {
       var box = document.getElementById("content");
-      
       if (!selectedModId) {
         box.innerHTML = '<div class="empty">Select an app above.</div>';
         return;
       }
-      
       box.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
-      
       try {
-        var res = await api("/packages");
-        var allPkgs = res.data || [];
-        
-        // Filter packages for selected mod
-        pkgsCache = allPkgs.filter(function(p) {
-          return String(p.modId) === String(selectedModId) || 
-                 String(p.mod_id) === String(selectedModId);
-        });
-        
+        var res = await api("/packages?all=1&modId=" + encodeURIComponent(selectedModId));
+        pkgsCache = res.data || [];
         window.__pkgsList = pkgsCache;
-        
-        var mod = mods.find(function (m) { return String(m.id) === String(selectedModId); });
+        var mod = mods.find(function (m) { return m.id === selectedModId; });
         var title = mod ? (mod.displayName || mod.name) : "App";
 
         var listHtml = !pkgsCache.length
-          ? '<div class="empty" style="padding:24px">No packages for this app yet.</div>'
-          : '<div class="pkg-list">' + pkgsCache.map(function (p) {
+          ? '<div class="empty" style="padding:24px">No packages for this app.</div>'
+          : '<div class="pkg-list">' + pkgsCache.map(function (p, idx) {
               return (
-                '<div class="pkg-item' + (p.isActive === false || p.is_active === false ? " is-off" : "") + '">' +
+                '<div class="pkg-item' + (p.isActive === false ? " is-off" : "") + '">' +
                   '<div style="min-width:0;flex:1">' +
-                    '<div class="pkg-name">' + esc(p.name || p.duration + " days") + '</div>' +
-                    '<div class="pkg-meta">' + esc(String(p.duration || "")) + ' days</div>' +
-                  '</div>' +
-                  '<div class="pkg-price">৳' + esc(String(p.price || 0)) + '</div>' +
+                    '<div class="pkg-name">' + esc(p.name) + "</div>" +
+                    '<div class="pkg-meta">' + esc(p.duration) +
+                      ' · <span class="badge ' + (p.isActive !== false ? "badge-active" : "badge-revoked") + '">' +
+                      (p.isActive !== false ? "active" : "off") + "</span></div>" +
+                  "</div>" +
+                  '<div class="pkg-price">' + formatPriceHtml(p.price) + '</div>' +
                   '<div class="pkg-actions">' +
-                    '<button class="btn btn-sm" type="button" onclick="movePackage(\'' + esc(p.id) + '\',-1)">↑</button>' +
-                    '<button class="btn btn-sm" type="button" onclick="movePackage(\'' + esc(p.id) + '\',1)">↓</button>' +
+                    '<button class="btn btn-sm" type="button" title="Move up" onclick="movePackage(\'' + esc(p.id) + '\',-1)">↑</button>' +
+                    '<button class="btn btn-sm" type="button" title="Move down" onclick="movePackage(\'' + esc(p.id) + '\',1)">↓</button>' +
                     '<button class="btn btn-sm" type="button" onclick="showEditForm(\'' + esc(p.id) + '\')">Edit</button>' +
+                    (p.isActive !== false
+                      ? '<button class="btn btn-sm" type="button" onclick="deactivatePackage(\'' + esc(p.id) + '\')">Off</button>'
+                      : '<button class="btn btn-sm" type="button" onclick="activatePackage(\'' + esc(p.id) + '\')">On</button>') +
                     '<button class="btn btn-sm btn-danger" type="button" onclick="deletePackage(\'' + esc(p.id) + '\')">Delete</button>' +
-                  '</div>' +
-                '</div>'
+                  "</div>" +
+                "</div>"
               );
-            }).join("") + '</div>';
+            }).join("") + "</div>";
 
         box.innerHTML =
           '<div class="pkg-panel">' +
             '<div class="pkg-panel-head">' +
-              '<div>' +
-                '<h2>' + esc(title) + '</h2>' +
-                '<p style="margin:2px 0 0;font-size:12px;color:var(--muted)">' + pkgsCache.length + ' package(s)</p>' +
-              '</div>' +
-              '<button class="btn btn-primary btn-sm" type="button" onclick="showCreateForm()">+ Add Package</button>' +
-            '</div>' +
+              "<div><h2>" + esc(title) + "</h2>" +
+                '<p style="margin:2px 0 0;font-size:12px;color:var(--muted)">' + pkgsCache.length + " package(s)</p></div>" +
+              '<button class="btn btn-primary btn-sm" type="button" onclick="showCreateForm()">+ Add package</button>' +
+            "</div>" +
             listHtml +
-          '</div>';
+          "</div>";
       } catch (e) {
-        box.innerHTML = '<div class="alert alert-error">' + esc(e.message || String(e)) + '</div>';
+        box.innerHTML = '<div class="alert alert-error">' + esc(e.message || String(e)) + "</div>";
       }
     }
 
     function showCreateForm() {
       if (!selectedModId) return;
-      
       document.getElementById("formContainer").innerHTML =
         '<div class="edit-form">' +
-          '<h3 style="margin:0 0 12px;font-size:14px">Add Package</h3>' +
+          "<h3 style=\"margin:0 0 12px;font-size:14px\">Add package</h3>" +
           '<form id="createForm">' +
             '<div class="form-row">' +
-              '<div class="form-group">' +
-                '<label>Name</label>' +
-                '<input type="text" id="pkgName" placeholder="e.g. Monthly" required>' +
-              '</div>' +
-              '<div class="form-group">' +
-                '<label>Duration (days)</label>' +
-                '<input type="number" id="pkgDuration" value="30" min="1" required>' +
-              '</div>' +
-            '</div>' +
-            '<div class="form-group">' +
-              '<label>Price (BDT)</label>' +
-              '<input type="number" id="pkgPrice" value="100" min="0" step="0.01" required>' +
-            '</div>' +
-            '<div style="display:flex;gap:8px">' +
-              '<button type="submit" class="btn btn-primary">Create</button>' +
-              '<button type="button" class="btn" onclick="document.getElementById(\'formContainer\').innerHTML=\'\'">Cancel</button>' +
-            '</div>' +
-          '</form>' +
-        '</div>';
-      
+              '<div class="form-group"><label>Name</label><input type="text" id="pkgName" placeholder="e.g. 30 Days" required></div>' +
+              '<div class="form-group"><label>Duration</label><input type="text" id="pkgDuration" value="+30d" placeholder="+7d, +30d" required></div>' +
+            "</div>" +
+            '<div class="form-group"><label>Price (BDT)</label><input type="number" id="pkgPrice" value="100" min="0" step="0.01" required></div>' +
+            '<button type="submit" class="btn btn-primary">Create</button> ' +
+            '<button type="button" class="btn" onclick="document.getElementById(\'formContainer\').innerHTML=\'\'">Cancel</button>' +
+          "</form></div>";
       document.getElementById("createForm").addEventListener("submit", async function (e) {
         e.preventDefault();
         try {
@@ -274,7 +211,7 @@
             body: {
               modId: selectedModId,
               name: document.getElementById("pkgName").value.trim(),
-              duration: parseInt(document.getElementById("pkgDuration").value),
+              duration: document.getElementById("pkgDuration").value.trim(),
               price: parseFloat(document.getElementById("pkgPrice").value)
             }
           });
@@ -288,34 +225,26 @@
     }
 
     function showEditForm(id) {
-      var p = pkgsCache.find(function (x) { return String(x.id) === String(id); });
+      var p = pkgsCache.find(function (x) { return x.id === id; });
       if (!p) return;
-      
       document.getElementById("formContainer").innerHTML =
         '<div class="edit-form">' +
-          '<h3 style="margin:0 0 12px;font-size:14px">Edit Package</h3>' +
+          "<h3 style=\"margin:0 0 12px;font-size:14px\">Edit package</h3>" +
           '<form id="editForm">' +
             '<div class="form-row">' +
-              '<div class="form-group">' +
-                '<label>Name</label>' +
-                '<input type="text" id="editName" value="' + esc(p.name || "") + '" required>' +
-              '</div>' +
-              '<div class="form-group">' +
-                '<label>Duration (days)</label>' +
-                '<input type="number" id="editDuration" value="' + esc(String(p.duration || 30)) + '" min="1" required>' +
-              '</div>' +
-            '</div>' +
-            '<div class="form-group">' +
-              '<label>Price (BDT)</label>' +
-              '<input type="number" id="editPrice" value="' + esc(String(p.price || 0)) + '" min="0" step="0.01" required>' +
-            '</div>' +
-            '<div style="display:flex;gap:8px">' +
-              '<button type="submit" class="btn btn-primary">Save</button>' +
-              '<button type="button" class="btn" onclick="document.getElementById(\'formContainer\').innerHTML=\'\'">Cancel</button>' +
-            '</div>' +
-          '</form>' +
-        '</div>';
-      
+              '<div class="form-group"><label>Name</label><input type="text" id="editName" value="' + esc(p.name || "") + '" required></div>' +
+              '<div class="form-group"><label>Duration</label><input type="text" id="editDuration" value="' + esc(p.duration || "") + '" required></div>' +
+            "</div>" +
+            '<div class="form-row">' +
+              '<div class="form-group"><label>Price (BDT)</label><input type="number" id="editPrice" value="' + esc(String(p.price != null ? p.price : 0)) + '" min="0" step="0.01" required></div>' +
+              '<div class="form-group"><label>Status</label><select id="editActive">' +
+                '<option value="1"' + (p.isActive !== false ? " selected" : "") + ">Active</option>" +
+                '<option value="0"' + (p.isActive === false ? " selected" : "") + ">Inactive</option>" +
+              "</select></div>" +
+            "</div>" +
+            '<button type="submit" class="btn btn-primary">Save</button> ' +
+            '<button type="button" class="btn" onclick="document.getElementById(\'formContainer\').innerHTML=\'\'">Cancel</button>' +
+          "</form></div>";
       document.getElementById("editForm").addEventListener("submit", async function (e) {
         e.preventDefault();
         try {
@@ -323,8 +252,9 @@
             method: "PATCH",
             body: {
               name: document.getElementById("editName").value.trim(),
-              duration: parseInt(document.getElementById("editDuration").value),
-              price: parseFloat(document.getElementById("editPrice").value)
+              duration: document.getElementById("editDuration").value.trim(),
+              price: parseFloat(document.getElementById("editPrice").value),
+              isActive: document.getElementById("editActive").value === "1"
             }
           });
           showToast("Package updated");
@@ -340,16 +270,11 @@
       var list = (window.__pkgsList || []).map(function (p) { return p.id; });
       var i = list.indexOf(id);
       if (i < 0) return;
-      
       var j = i + dir;
       if (j < 0 || j >= list.length) return;
-      
-      var tmp = list[i]; 
-      list[i] = list[j]; 
-      list[j] = tmp;
-      
+      var tmp = list[i]; list[i] = list[j]; list[j] = tmp;
       try {
-        await api("/packages/reorder", { method: "POST", body: { packageIds: list } });
+        await api("/packages/reorder", { method: "POST", body: { order: list } });
         showToast("Order saved");
         loadPackages();
       } catch (e) {
@@ -358,7 +283,7 @@
     }
 
     async function deletePackage(id) {
-      if (!confirm("Delete this package? Existing keys will remain valid.")) return;
+      if (!confirm("Permanently delete this package?\nExisting keys stay valid.")) return;
       try {
         await api("/packages/" + encodeURIComponent(id), { method: "DELETE" });
         showToast("Deleted");
@@ -367,6 +292,27 @@
         showToast(e.message || String(e), "error");
       }
     }
+
+    async function deactivatePackage(id) {
+      try {
+        await api("/packages/" + encodeURIComponent(id) + "?soft=1", { method: "DELETE" });
+        showToast("Deactivated");
+        loadPackages();
+      } catch (e) {
+        showToast(e.message || String(e), "error");
+      }
+    }
+
+    async function activatePackage(id) {
+      try {
+        await api("/packages/" + encodeURIComponent(id), { method: "PATCH", body: { isActive: true } });
+        showToast("Activated");
+        loadPackages();
+      } catch (e) {
+        showToast(e.message || String(e), "error");
+      }
+    }
   </script>
 </body>
 </html>
+
