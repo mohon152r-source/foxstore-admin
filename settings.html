@@ -13,43 +13,32 @@
   <title>Me — Fox Store</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
-    /* ── Me tab — modern compact ── */
     .me-page { max-width: 720px; margin: 0 auto; padding-bottom: 24px; }
 
     .me-hero {
       display: flex; align-items: center; gap: 14px;
       padding: 16px; margin-bottom: 14px;
-      border-radius: var(--radius);
-      background: linear-gradient(135deg, rgba(124,107,240,0.18) 0%, rgba(56,189,248,0.08) 50%, var(--card) 100%);
+      border-radius: 12px;
+      background: var(--card);
       border: 1px solid var(--border);
-      position: relative; overflow: hidden;
-    }
-    .me-hero::after {
-      content: ""; position: absolute; inset: auto -20% -40% auto;
-      width: 160px; height: 160px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(124,107,240,0.25), transparent 70%);
-      pointer-events: none;
     }
     .me-hero-avatar {
       width: 64px; height: 64px; border-radius: 18px;
       object-fit: cover; flex-shrink: 0;
-      border: 2px solid rgba(255,255,255,0.12);
-      background: var(--bg); box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      border: 2px solid var(--border);
+      background: var(--bg);
     }
-    .me-hero-meta { min-width: 0; flex: 1; z-index: 1; }
+    .me-hero-meta { min-width: 0; flex: 1; }
     .me-hero-name {
-      font-size: 18px; font-weight: 700; letter-spacing: -0.02em;
+      font-size: 18px; font-weight: 700;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .me-hero-role {
       display: inline-flex; align-items: center; gap: 6px;
       margin-top: 4px; padding: 3px 10px; border-radius: 999px;
-      font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em;
-      background: var(--primary-soft); color: #c4b5fd;
-      border: 1px solid rgba(124,107,240,0.25);
+      font-size: 11px; font-weight: 650; text-transform: uppercase;
+      background: rgba(99,102,241,0.1); color: var(--primary);
     }
-    .me-hero-role.role-ruler { background: rgba(250,204,21,0.12); color: #facc15; border-color: rgba(250,204,21,0.3); }
-    .me-hero-role.role-superadmin { background: rgba(56,189,248,0.12); color: #38bdf8; border-color: rgba(56,189,248,0.3); }
     .me-hero-bal {
       margin-top: 8px; font-size: 13px; color: var(--muted);
     }
@@ -60,122 +49,56 @@
     .me-section {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border-radius: 12px;
       overflow: hidden;
     }
     .me-section-head {
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
       padding: 12px 14px;
       border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,0.02);
     }
     .me-section-head h2 {
-      font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
+      font-size: 13px; font-weight: 700;
       text-transform: uppercase; color: var(--muted);
       margin: 0;
     }
-    .me-section-head .tag {
-      font-size: 10px; font-weight: 650; padding: 2px 8px; border-radius: 999px;
-      background: var(--primary-soft); color: #c4b5fd;
-    }
-    .me-section-head .tag.ok { background: var(--success-soft); color: #4ade80; }
-    .me-section-head .tag.warn { background: var(--warning-soft); color: #fbbf24; }
     .me-section-body { padding: 14px; }
 
-    .me-grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    @media (max-width: 560px) {
-      .me-grid-2 { grid-template-columns: 1fr; }
-      .me-hero { padding: 14px; }
-      .me-hero-avatar { width: 56px; height: 56px; border-radius: 16px; }
-      .me-hero-name { font-size: 16px; }
-    }
-
-    .me-section .form-group { margin-bottom: 12px; }
-    .me-section .form-group:last-of-type { margin-bottom: 0; }
-    .me-section label {
+    .form-group { margin-bottom: 12px; }
+    .form-group:last-child { margin-bottom: 0; }
+    .form-group label {
       display: block; font-size: 11px; font-weight: 650;
-      color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em;
+      color: var(--muted); text-transform: uppercase;
       margin-bottom: 6px;
     }
-    .me-section input[type="url"],
-    .me-section input[type="text"],
-    .me-section input[type="password"],
-    .me-section select {
+    .form-group input {
       width: 100%;
       padding: 10px 12px;
-      border-radius: var(--radius-sm);
+      border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--bg);
       color: var(--fg);
       font-size: 14px;
-      transition: border-color .15s, box-shadow .15s;
     }
-    .me-section input:focus,
-    .me-section select:focus {
+    .form-group input:focus {
       outline: none;
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px var(--primary-soft);
     }
-    .me-hint { font-size: 11px; color: var(--muted-2); margin-top: 5px; line-height: 1.4; }
 
     .me-actions {
       display: flex; flex-wrap: wrap; gap: 8px;
       margin-top: 14px;
     }
-    .me-actions .btn { flex: 1 1 auto; min-width: 120px; justify-content: center; }
 
-    .tg-box {
-      margin-top: 12px; padding: 12px;
-      border-radius: var(--radius-sm);
-      border: 1px dashed var(--border);
-      background: var(--bg);
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+      border: none;
     }
-    .tg-code {
-      font-family: var(--mono);
-      font-size: 16px; font-weight: 700;
-      letter-spacing: 0.06em;
-      color: #c4b5fd;
-      word-break: break-all;
+    .btn-block {
+      width: 100%;
+      justify-content: center;
     }
-    .tg-status-pill {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 12px; font-weight: 600;
-      padding: 6px 10px; border-radius: 999px;
-      background: var(--bg); border: 1px solid var(--border);
-    }
-    .tg-status-pill.linked { background: var(--success-soft); border-color: rgba(34,197,94,0.25); color: #4ade80; }
-    .tg-status-pill.unlinked { color: var(--muted); }
-
-    .brand-row {
-      display: flex; align-items: center; gap: 12px;
-      margin-bottom: 12px; padding: 10px;
-      border-radius: var(--radius-sm);
-      background: var(--bg); border: 1px solid var(--border);
-    }
-    .brand-row img, .brand-row .brand-mark {
-      width: 40px; height: 40px; border-radius: 12px;
-      object-fit: cover; flex-shrink: 0;
-    }
-    .brand-row .brand-mark {
-      display: grid; place-items: center;
-      background: var(--primary-soft); color: #c4b5fd; font-weight: 800;
-    }
-    .brand-row strong { font-size: 14px; display: block; }
-
-    .me-danger {
-      border-color: rgba(239,68,68,0.35);
-      background: linear-gradient(180deg, rgba(239,68,68,0.08), var(--card));
-    }
-    .me-danger .me-section-head { border-color: rgba(239,68,68,0.2); }
-    .btn-block { width: 100%; justify-content: center; }
-
-    .page-header.me-header { margin-bottom: 12px; }
-    .page-header.me-header h1 { font-size: 20px; letter-spacing: -0.02em; }
-    .page-header.me-header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -187,9 +110,8 @@
     document.addEventListener("auth-ready", function () {
       try {
         var user = window.__user || {};
-        var currentAvatar = typeof profileAvatarUrl === "function" ? profileAvatarUrl(user) : (user.avatarUrl || DEFAULT_AVATAR);
+        var currentAvatar = user.avatarUrl || DEFAULT_AVATAR;
         var isRulerUser = user.role === "ruler";
-        var brand = window.__brand || { name: "Fox Store", logoUrl: "" };
         var wallet = window.__wallet || {};
         var balText = typeof formatMoney === "function"
           ? formatMoney(wallet.balance || 0)
@@ -199,307 +121,97 @@
         var root = document.getElementById("page-content");
         if (!root) return;
 
-        var roleClass = "role-" + String(user.role || "reseller");
-        var tgLinked = !!(user.telegramLinked || (window.__telegram && window.__telegram.linked));
-        var tgName = user.telegramUsername || (window.__telegram && window.__telegram.telegramUsername) || "";
-
         var html =
           '<div class="me-page">' +
-            '<div class="page-header me-header"><h1>Me</h1><p>Profile, security &amp; preferences</p></div>' +
+            '<div class="page-header"><h1>Settings</h1><p>Profile, security &amp; preferences</p></div>' +
 
             '<div class="me-hero">' +
               '<img class="me-hero-avatar" id="avatarPreview" src="' + esc(currentAvatar) + '" alt="" onerror="this.onerror=null;this.src=DEFAULT_AVATAR">' +
               '<div class="me-hero-meta">' +
                 '<div class="me-hero-name">' + esc(user.username || "") + '</div>' +
-                '<span class="me-hero-role ' + esc(roleClass) + '">' + esc(user.role || "") + '</span>' +
-                '<div class="me-hero-bal">Balance <strong>' + esc(balText) + '</strong></div>' +
+                '<span class="me-hero-role">' + esc(user.role || "") + '</span>' +
+                '<div class="me-hero-bal">Balance: <strong>' + esc(balText) + '</strong></div>' +
               '</div>' +
             '</div>' +
 
             '<div class="me-stack">' +
 
-              /* Profile */
+              // Profile Section
               '<section class="me-section">' +
                 '<div class="me-section-head"><h2>Profile</h2></div>' +
                 '<div class="me-section-body">' +
-                  '<form id="avatarForm">' +
-                    '<div class="me-grid-2">' +
-                      '<div class="form-group"><label>Avatar URL</label>' +
-                        '<input type="url" id="avatarUrl" placeholder="https://…" value="' + esc(user.avatarUrl || "") + '">' +
-                        '<div class="me-hint">Optional. Empty = default.</div></div>' +
-                      '<div class="form-group"><label>Balance display</label>' +
-                        '<select id="currencyPref">' +
-                          '<option value="BDT">Taka (৳)</option>' +
-                          '<option value="CREDIT">Credit (100৳ = 1)</option>' +
-                        '</select>' +
-                        '<div class="me-hint">Storage stays in taka.</div></div>' +
-                    '</div>' +
-                    '<div class="me-actions">' +
-                      '<button type="submit" class="btn btn-primary" id="avatarBtn">Save profile</button>' +
-                    '</div>' +
-                  '</form>' +
-                '</div>' +
-              '</section>' +
-
-              /* Telegram */
-              '<section class="me-section">' +
-                '<div class="me-section-head">' +
-                  '<h2>Telegram</h2>' +
-                  '<span class="tag ' + (tgLinked ? "ok" : "warn") + '" id="tgTag">' + (tgLinked ? "Linked" : "Not linked") + '</span>' +
-                '</div>' +
-                '<div class="me-section-body">' +
-                  '<div class="tg-status-pill ' + (tgLinked ? "linked" : "unlinked") + '" id="tgStatus">' +
-                    (tgLinked
-                      ? ("Linked" + (tgName ? (" · @" + esc(tgName)) : ""))
-                      : "Not linked — connect for OTP &amp; bot control") +
+                  '<div class="form-group">' +
+                    '<label>Avatar URL</label>' +
+                    '<input type="url" id="avatarUrl" placeholder="https://…" value="' + esc(user.avatarUrl || "") + '">' +
                   '</div>' +
-                  '<div class="me-actions" style="margin-top:12px">' +
-                    '<button type="button" class="btn btn-primary" id="tgConnectBtn">Connect Telegram</button>' +
-                    (tgLinked && isRulerUser
-                      ? '<button type="button" class="btn" id="tgUnlinkBtn">Unlink</button>'
-                      : "") +
-                  '</div>' +
-                  (!tgLinked || isRulerUser
-                    ? ""
-                    : '<div class="me-hint" style="margin-top:8px">Permanent link. Only Ruler can change.</div>') +
-                  '<div class="tg-box" id="tgLinkBox" style="display:none">' +
-                    '<div class="me-hint" style="margin-bottom:6px">Send in Telegram (10 min)</div>' +
-                    '<div class="tg-code" id="tgCode"></div>' +
-                    '<a id="tgDeepLink" href="#" target="_blank" rel="noopener" class="btn btn-sm btn-primary" style="margin-top:10px;display:none">Open bot</a>' +
-                    '<div class="me-hint" id="tgHint" style="margin-top:8px"></div>' +
+                  '<div class="me-actions">' +
+                    '<button type="button" class="btn btn-primary" id="avatarBtn" onclick="saveAvatar()">Save Avatar</button>' +
                   '</div>' +
                 '</div>' +
               '</section>';
 
+        // Branding Section (Ruler only)
         if (isRulerUser) {
           html +=
-              '<section class="me-section">' +
-                '<div class="me-section-head"><h2>Branding</h2><span class="tag">Ruler</span></div>' +
-                '<div class="me-section-body">' +
-                  '<div class="brand-row">' +
-                    (brand.logoUrl
-                      ? '<img id="brandPreview" src="' + esc(brand.logoUrl) + '" alt="" onerror="this.style.opacity=0.3">'
-                      : '<div id="brandPreview" class="brand-mark">F</div>') +
-                    '<div><strong id="brandNamePreview">' + esc(brand.name || "Fox Store") + '</strong>' +
-                    '<span class="me-hint">Header for everyone</span></div>' +
-                  '</div>' +
-                  '<form id="brandForm">' +
-                    '<div class="me-grid-2">' +
-                      '<div class="form-group"><label>Brand name</label>' +
-                        '<input type="text" id="brandName" value="' + esc(brand.name || "Fox Store") + '" maxlength="40" required></div>' +
-                      '<div class="form-group"><label>Logo URL</label>' +
-                        '<input type="url" id="brandLogoUrl" placeholder="https://…" value="' + esc(brand.logoUrl || "") + '"></div>' +
-                    '</div>' +
-                    '<div class="me-actions">' +
-                      '<button type="submit" class="btn btn-primary" id="brandBtn">Save branding</button>' +
-                    '</div>' +
-                  '</form>' +
+            '<section class="me-section">' +
+              '<div class="me-section-head"><h2>Branding</h2></div>' +
+              '<div class="me-section-body">' +
+                '<div class="form-group">' +
+                  '<label>Brand Name</label>' +
+                  '<input type="text" id="brandName" value="' + esc((window.__brand && window.__brand.name) || "Fox Store") + '">' +
                 '</div>' +
-              '</section>';
+                '<div class="form-group">' +
+                  '<label>Logo URL</label>' +
+                  '<input type="url" id="brandLogo" placeholder="https://…" value="' + esc((window.__brand && window.__brand.logoUrl) || "") + '">' +
+                '</div>' +
+                '<div class="me-actions">' +
+                  '<button type="button" class="btn btn-primary" onclick="saveBranding()">Save Branding</button>' +
+                '</div>' +
+              '</div>' +
+            '</section>';
         }
 
+        // Password Section
         html +=
-              /* Password */
-              '<section class="me-section">' +
-                '<div class="me-section-head"><h2>Security</h2></div>' +
-                '<div class="me-section-body">' +
-                  '<form id="pwForm">' +
-                    '<div class="form-group"><label>Current password</label>' +
-                      '<input type="password" id="current" required minlength="4" autocomplete="current-password"></div>' +
-                    '<div class="me-grid-2">' +
-                      '<div class="form-group"><label>New password</label>' +
-                        '<input type="password" id="next" required minlength="4" autocomplete="new-password">' +
-                        '<div class="me-hint">Min 4 characters</div></div>' +
-                      '<div class="form-group"><label>Confirm</label>' +
-                        '<input type="password" id="confirm" required minlength="4" autocomplete="new-password"></div>' +
-                    '</div>' +
-                    '<div class="me-actions">' +
-                      '<button type="submit" class="btn btn-primary" id="submitBtn">Change password</button>' +
-                    '</div>' +
-                  '</form>' +
-                '</div>' +
-              '</section>' +
+          '<section class="me-section">' +
+            '<div class="me-section-head"><h2>Change Password</h2></div>' +
+            '<div class="me-section-body">' +
+              '<div class="form-group">' +
+                '<label>Current Password</label>' +
+                '<input type="password" id="currentPassword" placeholder="Enter current password">' +
+              '</div>' +
+              '<div class="form-group">' +
+                '<label>New Password</label>' +
+                '<input type="password" id="newPassword" placeholder="Enter new password">' +
+              '</div>' +
+              '<div class="form-group">' +
+                '<label>Confirm New Password</label>' +
+                '<input type="password" id="confirmPassword" placeholder="Confirm new password">' +
+              '</div>' +
+              '<div class="me-actions">' +
+                '<button type="button" class="btn btn-primary" id="passwordBtn" onclick="changePassword()">Change Password</button>' +
+              '</div>' +
+            '</div>' +
+          '</section>' +
 
-              /* Logout */
-              '<section class="me-section me-danger">' +
-                '<div class="me-section-body" style="padding:14px">' +
-                  '<button type="button" class="btn btn-danger btn-block" id="logoutBtn">Logout</button>' +
-                '</div>' +
-              '</section>' +
+          // Logout Section
+          '<section class="me-section">' +
+            '<div class="me-section-body">' +
+              '<button type="button" class="btn btn-danger btn-block" onclick="logout()">Logout</button>' +
+            '</div>' +
+          '</section>' +
 
-            '</div>' + /* stack */
-          '</div>'; /* page */
+        '</div>' +
+      '</div>';
 
         root.innerHTML = html;
         if (typeof bindPasswordToggles === "function") bindPasswordToggles(root);
-        if (typeof bindPasswordStrength === "function") bindPasswordStrength(root);
 
-        var cur = (wallet.currency || "BDT");
-        var curEl = document.getElementById("currencyPref");
-        if (curEl) curEl.value = String(cur).toUpperCase() === "CREDIT" ? "CREDIT" : "BDT";
-
-        // Refresh telegram from /auth/me
-        api("/auth/me").then(function (me) {
-          if (me.telegram) window.__telegram = me.telegram;
-          if (me.user) {
-            window.__user = Object.assign({}, window.__user || {}, me.user);
-            var linked = !!me.user.telegramLinked;
-            var name = me.user.telegramUsername || "";
-            var st = document.getElementById("tgStatus");
-            var tag = document.getElementById("tgTag");
-            if (st) {
-              st.className = "tg-status-pill " + (linked ? "linked" : "unlinked");
-              st.textContent = linked ? ("Linked" + (name ? (" · @" + name) : "")) : "Not linked — connect for OTP & bot control";
-            }
-            if (tag) {
-              tag.className = "tag " + (linked ? "ok" : "warn");
-              tag.textContent = linked ? "Linked" : "Not linked";
-            }
-          }
-          if (me.wallet) {
-            window.__wallet = me.wallet;
-            var balEl = document.querySelector(".me-hero-bal strong");
-            if (balEl && typeof formatMoney === "function") balEl.textContent = formatMoney(me.wallet.balance || 0);
-          }
-        }).catch(function () {});
-
+        // Avatar preview
         document.getElementById("avatarUrl").addEventListener("input", function () {
           document.getElementById("avatarPreview").src = this.value.trim() || DEFAULT_AVATAR;
         });
 
-        document.getElementById("avatarForm").addEventListener("submit", async function (e) {
-          e.preventDefault();
-          var btn = document.getElementById("avatarBtn");
-          btn.disabled = true;
-          btn.innerHTML = '<span class="spinner"></span> Saving…';
-          try {
-            var curPref = document.getElementById("currencyPref").value;
-            var res = await api("/auth/profile", {
-              method: "PATCH",
-              body: {
-                avatarUrl: document.getElementById("avatarUrl").value.trim(),
-                currency: curPref
-              }
-            });
-            if (res.user) window.__user = Object.assign({}, window.__user || {}, res.user);
-            if (res.wallet) window.__wallet = res.wallet;
-            else {
-              window.__wallet = window.__wallet || {};
-              window.__wallet.currency = curPref;
-            }
-            showToast("Profile saved");
-            location.reload();
-          } catch (err) {
-            showToast(err.message || "Save failed", "error");
-            btn.disabled = false;
-            btn.textContent = "Save profile";
-          }
-        });
-
-        var connectBtn = document.getElementById("tgConnectBtn");
-        if (connectBtn) {
-          connectBtn.onclick = async function () {
-            connectBtn.disabled = true;
-            try {
-              var res = await api("/auth/telegram/link-code", { method: "POST", body: {} });
-              var box = document.getElementById("tgLinkBox");
-              var codeEl = document.getElementById("tgCode");
-              var hint = document.getElementById("tgHint");
-              var deep = document.getElementById("tgDeepLink");
-              if (box) box.style.display = "";
-              if (codeEl) codeEl.textContent = "/start " + res.code;
-              if (hint) hint.textContent = res.instructions || "";
-              if (deep && res.deepLink) {
-                deep.href = res.deepLink;
-                deep.style.display = "inline-flex";
-              }
-              showToast("Link code ready");
-            } catch (err) {
-              showToast(err.message || "Failed", "error");
-            }
-            connectBtn.disabled = false;
-          };
-        }
-        var unlinkBtn = document.getElementById("tgUnlinkBtn");
-        if (unlinkBtn) {
-          unlinkBtn.onclick = async function () {
-            if (!confirm("Unlink Telegram from this account?")) return;
-            try {
-              await api("/auth/telegram/unlink", { method: "POST", body: {} });
-              showToast("Telegram unlinked");
-              location.reload();
-            } catch (err) {
-              showToast(err.message || "Failed", "error");
-            }
-          };
-        }
-
-        if (isRulerUser) {
-          var logoInput = document.getElementById("brandLogoUrl");
-          if (logoInput) {
-            logoInput.addEventListener("input", function () {
-              var prev = document.getElementById("brandPreview");
-              var v = this.value.trim();
-              if (prev && prev.tagName === "IMG") prev.src = v || "";
-            });
-          }
-          var nameInput = document.getElementById("brandName");
-          if (nameInput) {
-            nameInput.addEventListener("input", function () {
-              var el = document.getElementById("brandNamePreview");
-              if (el) el.textContent = this.value || "Fox Store";
-            });
-          }
-          document.getElementById("brandForm").addEventListener("submit", async function (e) {
-            e.preventDefault();
-            var btn = document.getElementById("brandBtn");
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> Saving…';
-            try {
-              var name = document.getElementById("brandName").value.trim() || "Fox Store";
-              var logo = document.getElementById("brandLogoUrl").value.trim();
-              await api("/settings/branding", {
-                method: "PUT",
-                body: { name: name, logoUrl: logo, logo_url: logo }
-              });
-              window.__brand = { name: name, logoUrl: logo };
-              showToast("Branding saved");
-              location.reload();
-            } catch (err) {
-              showToast(err.message || "Save failed", "error");
-              btn.disabled = false;
-              btn.textContent = "Save branding";
-            }
-          });
-        }
-
-        document.getElementById("pwForm").addEventListener("submit", async function (e) {
-          e.preventDefault();
-          var btn = document.getElementById("submitBtn");
-          var next = document.getElementById("next").value;
-          var confirm = document.getElementById("confirm").value;
-          if (next !== confirm) { showToast("Passwords don't match", "error"); return; }
-          if (next.length < 4) { showToast("Password too short", "error"); return; }
-          btn.disabled = true;
-          btn.innerHTML = '<span class="spinner"></span> Changing…';
-          try {
-            await api("/auth/change-password", {
-              method: "POST",
-              body: {
-                currentPassword: document.getElementById("current").value,
-                newPassword: next
-              }
-            });
-            showToast("Password changed — sign in again");
-            setTimeout(function () { window.location.href = "login.html"; }, 1200);
-          } catch (err) {
-            showToast(err.message || "Failed", "error");
-            btn.disabled = false;
-            btn.textContent = "Change password";
-          }
-        });
-
-        document.getElementById("logoutBtn").onclick = function () { logout(); };
       } catch (err) {
         console.error("settings render", err);
         var root2 = document.getElementById("page-content") || document.getElementById("app");
@@ -509,6 +221,77 @@
         }
       }
     });
+
+    async function saveAvatar() {
+      var avatarUrl = document.getElementById("avatarUrl").value.trim();
+      try {
+        await api("/auth/profile", {
+          method: "PATCH",
+          body: { avatarUrl: avatarUrl }
+        });
+        showToast("Avatar saved");
+        setTimeout(function() { location.reload(); }, 500);
+      } catch (err) {
+        showToast(err.message || "Failed to save", "error");
+      }
+    }
+
+    async function saveBranding() {
+      var brandName = document.getElementById("brandName").value.trim();
+      var logoUrl = document.getElementById("brandLogo").value.trim();
+      
+      try {
+        await api("/settings/branding", {
+          method: "POST",
+          body: { 
+            brandName: brandName,
+            logoUrl: logoUrl
+          }
+        });
+        showToast("Branding saved");
+        setTimeout(function() { location.reload(); }, 500);
+      } catch (err) {
+        showToast(err.message || "Failed to save branding", "error");
+      }
+    }
+
+    async function changePassword() {
+      var currentPassword = document.getElementById("currentPassword").value;
+      var newPassword = document.getElementById("newPassword").value;
+      var confirmPassword = document.getElementById("confirmPassword").value;
+      
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        showToast("Please fill all fields", "error");
+        return;
+      }
+      
+      if (newPassword !== confirmPassword) {
+        showToast("Passwords don't match", "error");
+        return;
+      }
+      
+      if (newPassword.length < 4) {
+        showToast("Password too short (min 4 characters)", "error");
+        return;
+      }
+      
+      try {
+        await api("/auth/change-password", {
+          method: "POST",
+          body: {
+            currentPassword: currentPassword,
+            newPassword: newPassword
+          }
+        });
+        showToast("Password changed. Please login again.");
+        setTimeout(function() { 
+          clearToken();
+          window.location.href = "login.html"; 
+        }, 1000);
+      } catch (err) {
+        showToast(err.message || "Failed to change password", "error");
+      }
+    }
   </script>
 </body>
 </html>
