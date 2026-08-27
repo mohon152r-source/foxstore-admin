@@ -12,164 +12,19 @@
 ">
   <title>Keys — Fox Store</title>
   <link rel="stylesheet" href="css/style.css">
-  <style>
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 14px;
-      align-items: center;
-    }
-    .toolbar-input {
-      flex: 1;
-      min-width: 150px;
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--card);
-      color: var(--fg);
-      font-size: 13px;
-    }
-    .toolbar-select {
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--card);
-      color: var(--fg);
-      font-size: 13px;
-      min-width: 120px;
-    }
-    .key-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 10px;
-    }
-    .key-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
-      transition: all 0.2s;
-    }
-    .key-card:hover {
-      border-color: var(--primary);
-    }
-    .key-card.is-selected {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-    }
-    .key-card-top {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-    .key-check {
-      display: flex;
-      align-items: center;
-    }
-    .key-code {
-      flex: 1;
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--primary);
-      text-decoration: none;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .key-card-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 10px;
-    }
-    .meta-item {
-      font-size: 11px;
-      color: var(--muted);
-      padding: 2px 8px;
-      background: var(--bg);
-      border-radius: 4px;
-    }
-    .meta-item.is-dead {
-      color: var(--danger);
-    }
-    .meta-item.is-trial {
-      color: #a78bfa;
-    }
-    .key-card-actions {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-    .bulk-bar {
-      background: var(--card);
-      border: 1px solid var(--primary);
-      border-radius: 8px;
-      padding: 8px 12px;
-      margin-bottom: 10px;
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .pagination {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 14px;
-      padding: 10px 0;
-    }
-    .page-info {
-      font-size: 13px;
-      color: var(--muted);
-    }
-    .page-btns {
-      display: flex;
-      gap: 6px;
-    }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-    .badge-active { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
-    .badge-paused { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-    .badge-banned { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-    .badge-expired { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
-    .badge-info { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
-  </style>
 </head>
 <body>
   <div id="app" class="layout"></div>
   <script src="js/config.js"></script>
   <script src="js/app.js"></script>
   <script>
-    var state = { 
-      mod: "all", 
-      status: "all", 
-      q: "", 
-      deviceId: "", 
-      packageId: "all", 
-      sellerId: "all", 
-      keyType: "all", 
-      page: 1, 
-      keys: [], 
-      total: 0, 
-      totalPages: 1, 
-      selected: new Set(), 
-      mods: [], 
-      packages: [], 
-      sellers: [] 
-    };
+    var state = { mod: "all", status: "all", q: "", deviceId: "", packageId: "all", sellerId: "all", keyType: "all", page: 1, keys: [], total: 0, totalPages: 1, selected: new Set(), mods: [], packages: [], sellers: [] };
     var canManage = false;
-    var debounceTimer = null;
+    var debounce = null;
 
     function deviceCount(k) {
       if (!k) return 0;
+      // TrialKey list API returns numeric deviceCount from TrialDeviceBinding
       if (typeof k.deviceCount === "number" && !isNaN(k.deviceCount)) return k.deviceCount;
       if (k.deviceCount != null && String(k.deviceCount).trim() !== "") {
         var n = parseInt(k.deviceCount, 10);
@@ -184,6 +39,7 @@
       return 0;
     }
 
+    /** Pretty trial duration: +3d / 30m / 12h → 3d / 30m / 12h */
     function formatTrialDuration(raw) {
       if (!raw) return "—";
       var s = String(raw).trim().replace(/^\+/, "");
@@ -196,7 +52,7 @@
       if (s === "active") cls += "badge-active";
       else if (s === "paused") cls += "badge-paused";
       else if (s === "banned" || s === "revoked") cls += "badge-banned";
-      else if (s === "expired") cls += "badge-expired";
+      else if (s === "expired") cls += "badge-deleted";
       else cls += "badge-info";
       return '<span class="' + cls + '">' + esc(s) + "</span>";
     }
@@ -206,7 +62,7 @@
       canManage = isManager();
       var jobs = [
         api("/mods").then(function (res) { state.mods = (res && res.data) || []; }).catch(function () { state.mods = []; }),
-        api("/packages").then(function (res) { state.packages = (res && res.data) || []; }).catch(function () { state.packages = []; })
+        api("/packages?all=1").then(function (res) { state.packages = (res && res.data) || []; }).catch(function () { state.packages = []; })
       ];
       if (typeof isRuler === "function" && isRuler()) {
         jobs.push(api("/resellers").then(function (res) { state.sellers = (res && res.data) || []; }).catch(function () { state.sellers = []; }));
@@ -219,6 +75,12 @@
 
     function packageOptionsHtml() {
       var list = state.packages || [];
+      if (state.mod && state.mod !== "all") {
+        list = list.filter(function (p) {
+          return p.modName === state.mod || p.mod === state.mod ||
+            (state.mods || []).some(function (m) { return m.name === state.mod && (p.modId === m.id || p.mod_id === m.id); });
+        });
+      }
       return '<option value="all">All packages</option>' + list.map(function (p) {
         return '<option value="' + esc(p.id) + '"' + (state.packageId === p.id ? " selected" : "") + '>' +
           esc(p.name || p.duration || "pkg") + '</option>';
@@ -243,7 +105,8 @@
           '</div>' +
         '</div>' +
         '<div class="toolbar" role="search">' +
-          '<input type="text" class="toolbar-input" id="filterQ" placeholder="Search key…" value="' + esc(state.q) + '">' +
+          '<input type="text" class="toolbar-input grow" id="filterQ" placeholder="Search key…" value="' + esc(state.q) + '">' +
+          '<input type="text" class="toolbar-input grow" id="filterDeviceId" placeholder="Device ID…" value="' + esc(state.deviceId) + '">' +
           '<select id="filterMod" class="toolbar-select"><option value="all">All apps</option>' + modOpts + '</select>' +
           '<select id="filterPackage" class="toolbar-select">' + packageOptionsHtml() + '</select>' +
           '<select id="filterStatus" class="toolbar-select">' +
@@ -254,13 +117,20 @@
             '<option value="expired">Expired</option>' +
             '<option value="revoked">Revoked</option>' +
           '</select>' +
-          (typeof isRuler === "function" && isRuler()
-            ? '<select id="filterKeyType" class="toolbar-select">' +
+          ((typeof isRuler === "function" && isRuler())
+            ? ('<select id="filterKeyType" class="toolbar-select">' +
                 '<option value="all">All types</option>' +
                 '<option value="regular">Regular</option>' +
                 '<option value="trial">Trial</option>' +
-              '</select>'
+              '</select>')
             : '') +
+          ((typeof isRuler === "function" && isRuler())
+            ? ('<select id="filterSeller" class="toolbar-select"><option value="all">All sellers</option>' +
+                state.sellers.map(function (s) {
+                  return '<option value="' + esc(s.id) + '"' + (state.sellerId === s.id ? " selected" : "") + '>' +
+                    esc(s.username) + '</option>';
+                }).join("") + '</select>')
+            : "") +
         '</div>' +
         '<div id="bulkBar" class="bulk-bar" hidden></div>' +
         '<div id="tableContent" class="key-grid"><div class="empty"><span class="spinner"></span></div></div>' +
@@ -270,16 +140,24 @@
       document.getElementById("filterMod").value = state.mod;
       var fkt = document.getElementById("filterKeyType"); if (fkt) fkt.value = state.keyType;
       document.getElementById("filterPackage").value = state.packageId;
+      var fs = document.getElementById("filterSeller"); if (fs) fs.value = state.sellerId;
 
       document.getElementById("filterQ").addEventListener("input", function (e) {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(function () {
+        clearTimeout(debounce);
+        debounce = setTimeout(function () {
           state.q = e.target.value.trim();
           state.page = 1;
           loadKeys();
         }, 320);
       });
-      
+      document.getElementById("filterDeviceId").addEventListener("input", function (e) {
+        clearTimeout(debounce);
+        debounce = setTimeout(function () {
+          state.deviceId = e.target.value.trim();
+          state.page = 1;
+          loadKeys();
+        }, 320);
+      });
       document.getElementById("filterMod").addEventListener("change", function (e) {
         state.mod = e.target.value;
         state.packageId = "all";
@@ -288,22 +166,25 @@
         if (fp) fp.innerHTML = packageOptionsHtml();
         loadKeys();
       });
-      
       document.getElementById("filterStatus").addEventListener("change", function (e) {
         state.status = e.target.value;
         state.page = 1;
         loadKeys();
       });
-      
       document.getElementById("filterPackage").addEventListener("change", function (e) {
         state.packageId = e.target.value;
         state.page = 1;
         loadKeys();
       });
-      
       var fktEl = document.getElementById("filterKeyType");
       if (fktEl) fktEl.addEventListener("change", function (e) {
         state.keyType = e.target.value;
+        state.page = 1;
+        loadKeys();
+      });
+      var fSeller = document.getElementById("filterSeller");
+      if (fSeller) fSeller.addEventListener("change", function (e) {
+        state.sellerId = e.target.value;
         state.page = 1;
         loadKeys();
       });
@@ -319,9 +200,14 @@
         if (state.mod !== "all") params.set("mod", state.mod);
         if (state.status !== "all") params.set("status", state.status);
         if (state.q) params.set("q", state.q);
+        if (state.deviceId) params.set("deviceId", state.deviceId);
         if (state.packageId !== "all") params.set("packageId", state.packageId);
-        if (state.keyType !== "all") params.set("keyType", state.keyType);
-        
+        if (typeof isRuler === "function" && isRuler()) {
+          if (state.keyType !== "all") params.set("keyType", state.keyType);
+        } else {
+          params.set("keyType", "regular"); // sellers never see trial keys
+        }
+        if (state.sellerId !== "all") params.set("sellerId", state.sellerId);
         var data = await api("/keys?" + params.toString());
         state.keys = data.data || [];
         state.total = (data.pagination && data.pagination.total) || state.keys.length;
@@ -354,51 +240,54 @@
       tc.className = "key-grid";
       tc.innerHTML = state.keys.map(function (k) {
         var isTrial = (k.keyType === "trial");
-        var days = !isTrial ? daysUntil(k.expiresAt) : null;
-        var expired = !isTrial && (k.status === "expired" || (days !== null && days <= 0));
+        var notActivated = !isTrial && !k.activatedAt && k.duration;
+        var days = (isTrial || notActivated) ? null : daysUntil(k.expiresAt);
+        var expired = !isTrial && !notActivated && (k.status === "expired" || days === 0);
         var validityLabel;
         if (isTrial) {
-          validityLabel = "⏱ " + formatTrialDuration(k.trialDuration || k.duration);
+          validityLabel = "⏱ " + formatTrialDuration(k.trialDuration);
+        } else if (notActivated) {
+          validityLabel = "⏱ on login · " + formatTrialDuration(k.duration);
         } else if (expired) {
           validityLabel = "⏳ expired";
         } else {
-          validityLabel = "⏳ " + (days !== null ? days + "d left" : "—");
+          validityLabel = "⏳ " + days + "d left";
         }
-        
         var sel = state.selected.has(k.id);
         var st = (k.status || "active").toLowerCase();
         var actions =
           '<button class="btn btn-sm" type="button" onclick="copyToClipboard(\'' + esc(k.key) + '\')" title="Copy key">Copy</button>' +
           '<a class="btn btn-sm" href="key.html?id=' + encodeURIComponent(k.id) + '" title="Details">Details</a>';
-        
-        if (canManage) {
-          if (st === "paused") {
+        if (true) {
+          if (st === "paused" && hasPerm("key_resume")) {
             actions += '<button class="btn btn-sm" type="button" onclick="resumeKey(\'' + esc(k.id) + '\')">Resume</button>';
-          } else if (st !== "banned") {
+          } else if (st !== "banned" && hasPerm("key_pause")) {
             actions += '<button class="btn btn-sm" type="button" onclick="pauseKey(\'' + esc(k.id) + '\')">Pause</button>';
           }
-          if (st === "banned") {
+          if (st === "banned" && hasPerm("key_unban")) {
             actions += '<button class="btn btn-sm" type="button" onclick="unbanKey(\'' + esc(k.id) + '\')">Unban</button>';
-          } else {
+          } else if (st !== "banned" && hasPerm("key_ban")) {
             actions += '<button class="btn btn-sm" type="button" onclick="banKey(\'' + esc(k.id) + '\')">Ban</button>';
           }
-          actions += '<button class="btn btn-sm btn-danger" type="button" onclick="deleteKey(\'' + esc(k.id) + '\')">Delete</button>';
+          if ((typeof isManager === "function" && isManager()) || (typeof hasPerm === "function" && hasPerm("key_delete"))) {
+            actions += '<button class="btn btn-sm btn-danger" type="button" onclick="deleteKey(\'' + esc(k.id) + '\')">Delete</button>';
+          }
         }
 
         return (
           '<article class="key-card key-card--' + esc(st) + (sel ? " is-selected" : "") + '">' +
             '<div class="key-card-top">' +
-              '<label class="key-check"><input type="checkbox"' + (sel ? " checked" : "") +
+              '<label class="key-check"><input type="checkbox" class="checkbox"' + (sel ? " checked" : "") +
                 ' onchange="toggleSelect(\'' + esc(k.id) + '\', this.checked)"></label>' +
               '<a class="key-code" href="key.html?id=' + encodeURIComponent(k.id) + '">' + esc(k.key) + "</a>" +
               statusBadge(st) +
               (k.keyType === "trial" ? '<span class="badge badge-info">trial</span>' : "") +
             "</div>" +
             '<div class="key-card-meta">' +
-              '<span class="meta-item">' + esc(k.modName || k.modDisplayName || "—") + "</span>" +
+              '<span class="meta-item">' + esc(k.modDisplayName || k.modName || "—") + "</span>" +
               '<span class="meta-item">📱 ' + deviceCount(k) + "/" + esc(String(k.access != null ? k.access : "—")) + "</span>" +
               '<span class="meta-item ' + (expired ? "is-dead" : (isTrial ? "is-trial" : "")) + '">' + validityLabel + "</span>" +
-              '<span class="meta-item">' + esc(k.sellerName || "—") + "</span>" +
+              '<span class="meta-item muted">' + esc(k.sellerName || "—") + "</span>" +
             "</div>" +
             '<div class="key-card-actions">' + actions + "</div>" +
           "</article>"
@@ -420,6 +309,7 @@
           bulkBar.hidden = false;
           bulkBar.innerHTML =
             '<strong>' + state.selected.size + " selected</strong>" +
+            '<button class="btn btn-sm" type="button" onclick="bulkAction(\'extend\',\'7d\')">+7 days</button>' +
             '<button class="btn btn-sm" type="button" onclick="bulkAction(\'pause\')">Pause</button>' +
             '<button class="btn btn-sm" type="button" onclick="bulkAction(\'ban\')">Ban</button>' +
             '<button class="btn btn-sm" type="button" onclick="bulkAction(\'unban\')">Unban</button>' +
@@ -436,98 +326,65 @@
       if (checked) state.selected.add(id); else state.selected.delete(id);
       renderTable();
     }
-    
     function prevPage() { if (state.page > 1) { state.page--; loadKeys(); } }
     function nextPage() { if (state.page < state.totalPages) { state.page++; loadKeys(); } }
 
     async function pauseKey(id) {
-      if (!confirm("Pause this key?")) return;
-      try { 
-        await api("/keys/" + id + "/pause", { method: "POST" }); 
-        showToast("Paused"); 
-        loadKeys(); 
-      }
+      var r = prompt("Pause reason?"); if (r === null) return;
+      try { await api("/keys/" + id + "/pause", { method: "POST", body: { reason: r || "Paused" } }); showToast("Paused"); loadKeys(); }
       catch (e) { showToast(e.message, "error"); }
     }
-    
     async function resumeKey(id) {
-      try { 
-        await api("/keys/" + id + "/resume", { method: "POST" }); 
-        showToast("Resumed"); 
-        loadKeys(); 
-      }
+      try { await api("/keys/" + id + "/resume", { method: "POST" }); showToast("Resumed"); loadKeys(); }
       catch (e) { showToast(e.message, "error"); }
     }
-    
     async function banKey(id) {
-      if (!confirm("Ban this key?")) return;
-      try { 
-        await api("/keys/" + id + "/ban", { method: "POST" }); 
-        showToast("Banned"); 
-        loadKeys(); 
-      }
+      var r = prompt("Ban reason?"); if (r === null) return;
+      try { await api("/keys/" + id + "/ban", { method: "POST", body: { reason: r || "Banned" } }); showToast("Banned"); loadKeys(); }
       catch (e) { showToast(e.message, "error"); }
     }
-    
     async function unbanKey(id) {
-      try { 
-        await api("/keys/" + id + "/unban", { method: "POST" }); 
-        showToast("Unbanned"); 
-        loadKeys(); 
-      }
+      try { await api("/keys/" + id + "/unban", { method: "POST" }); showToast("Unbanned"); loadKeys(); }
       catch (e) { showToast(e.message, "error"); }
     }
-    
     async function deleteKey(id) {
       if (!confirm("Permanently delete this key? This cannot be undone.")) return;
-      try { 
-        await api("/keys/" + id + "/delete", { method: "DELETE" }); 
-        showToast("Deleted"); 
-        loadKeys(); 
-      }
+      try { await api("/keys/" + id + "/delete", { method: "POST" }); showToast("Deleted"); loadKeys(); }
       catch (e) { showToast(e.message, "error"); }
     }
-    
     function toggleSelectAllPage() {
       var allSelected = state.keys.length > 0 && state.keys.every(function (k) { return state.selected.has(k.id); });
       if (allSelected) state.keys.forEach(function (k) { state.selected.delete(k.id); });
       else state.keys.forEach(function (k) { state.selected.add(k.id); });
       renderTable();
     }
-    
-    async function bulkAction(action) {
+    async function bulkAction(action, duration) {
       if (!state.selected.size) return;
       if (!confirm(action + " " + state.selected.size + " key(s)?")) return;
       try {
         var body = { ids: Array.from(state.selected), action: action };
+        if (duration) body.duration = "+" + duration;
         var res = await api("/keys/bulk", { method: "POST", body: body });
         showToast((res.processed || 0) + " processed");
         state.selected.clear();
         loadKeys();
       } catch (e) { showToast(e.message, "error"); }
     }
-    
     function exportCsv() {
       var params = new URLSearchParams();
       if (state.mod !== "all") params.set("mod", state.mod);
       if (state.status !== "all") params.set("status", state.status);
-      
-      fetch(API_BASE + "/api/admin/keys/export?" + params.toString(), { 
-        headers: { Authorization: "Bearer " + getToken() } 
-      })
+      fetch(API_BASE + "/api/admin/keys/export?" + params.toString(), { headers: { Authorization: "Bearer " + getToken() } })
         .then(function (r) { return r.blob(); })
         .then(function (blob) {
           var url = URL.createObjectURL(blob);
           var a = document.createElement("a");
-          a.href = url; 
-          a.download = "keys-" + new Date().toISOString().slice(0, 10) + ".csv";
-          document.body.appendChild(a); 
-          a.click(); 
-          document.body.removeChild(a); 
-          URL.revokeObjectURL(url);
+          a.href = url; a.download = "keys-" + new Date().toISOString().slice(0, 10) + ".csv";
+          document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
         })
         .catch(function (e) { showToast(e.message, "error"); });
     }
   </script>
 </body>
 </html>
+
