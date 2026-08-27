@@ -13,98 +13,27 @@
   <title>Apps — Fox Store</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
-    .app-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 12px;
-    }
     .app-card {
       position: relative;
       border-radius: 16px;
       border: 1px solid var(--border);
-      background: var(--card);
+      background: linear-gradient(160deg, rgba(99,102,241,0.08), var(--card) 45%);
       padding: 14px;
       transition: border-color 0.15s, transform 0.12s;
-      cursor: pointer;
     }
-    .app-card:hover { 
-      border-color: var(--primary); 
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    .app-card:hover { border-color: var(--primary); transform: translateY(-1px); }
+    .app-id-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 8px; padding: 4px 8px; border-radius: 8px;
+      background: rgba(0,0,0,0.25); border: 1px solid var(--border);
+      font-family: ui-monospace, monospace; font-size: 11px; color: #93c5fd;
+      max-width: 100%; word-break: break-all;
     }
-    .app-card-header {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 10px;
+    .app-id-chip button {
+      border: none; background: transparent; color: var(--muted);
+      cursor: pointer; font-size: 12px; padding: 0 2px;
     }
-    .app-logo {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      color: #fff;
-      font-size: 20px;
-      flex-shrink: 0;
-    }
-    .app-info {
-      flex: 1;
-      min-width: 0;
-    }
-    .app-name {
-      font-size: 15px;
-      font-weight: 600;
-      margin-bottom: 2px;
-    }
-    .app-slug {
-      font-size: 12px;
-      color: var(--muted);
-      font-family: monospace;
-    }
-    .app-meta {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-top: 4px;
-    }
-    .app-card-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 10px;
-    }
-    .price-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 12px;
-    }
-    .price-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      background: var(--bg);
-      border-radius: 8px;
-      border: 1px solid var(--border);
-    }
-    .price-name {
-      font-weight: 600;
-      font-size: 13px;
-    }
-    .price-dur {
-      font-size: 11px;
-      color: var(--muted);
-    }
-    .price-amt {
-      font-weight: 700;
-      font-size: 14px;
-      color: var(--primary);
-    }
+    .app-card-actions { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
   </style>
 </head>
 <body>
@@ -113,79 +42,24 @@
   <script src="js/app.js"></script>
   <script>
     var modsCache = [];
-    
     requireAuth();
     document.addEventListener("auth-ready", function () {
       mountShell("Apps");
       document.getElementById("page-content").innerHTML =
-        '<div class="page-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">' +
-          '<div><h1>Apps</h1><p>Manage your applications</p></div>' +
+        '<div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">' +
+          '<div><h1>Apps</h1><p>Tap a card to view pricing &amp; generate keys</p></div>' +
           (isRuler()
-            ? '<button class="btn btn-primary" type="button" onclick="showCreateForm()">+ Add App</button>'
+            ? '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+                '<a class="btn" href="packages.html">Manage Pricing</a>' +
+                '<button class="btn btn-primary" type="button" onclick="showCreateForm()">+ Add App</button>' +
+              '</div>'
             : '') +
         '</div>' +
         '<div id="formContainer"></div>' +
+        '<div id="detailPanel"></div>' +
         '<div id="content" class="app-grid"><div class="empty"><span class="spinner"></span></div></div>';
-      
       loadMods();
     });
-
-    async function loadMods() {
-      var box = document.getElementById("content");
-      try {
-        var res = await api("/mods");
-        modsCache = res.data || [];
-        
-        if (!modsCache.length) {
-          box.innerHTML = '<div class="empty">No apps yet.' + (isRuler() ? ' Click "+ Add App" to create one.' : '') + '</div>';
-          return;
-        }
-        
-        box.className = "app-grid";
-        box.innerHTML = modsCache.map(function (m) {
-          var initial = (m.displayName || m.name || "?").charAt(0).toUpperCase();
-          var logoColor = m.logoUrl ? 'transparent' : 'var(--primary)';
-          var logo = m.logoUrl
-            ? '<img src="' + esc(m.logoUrl) + '" alt="" class="app-logo" style="object-fit:cover;background:var(--bg)">'
-            : '<div class="app-logo" style="background:' + logoColor + '">' + initial + '</div>';
-
-          var controls = "";
-          if (isRuler()) {
-            controls =
-              '<div class="app-card-actions" onclick="event.stopPropagation()">' +
-                '<button class="btn btn-sm" type="button" title="Move up" onclick="moveMod(\'' + esc(m.id) + '\',-1)">↑</button>' +
-                '<button class="btn btn-sm" type="button" title="Move down" onclick="moveMod(\'' + esc(m.id) + '\',1)">↓</button>' +
-                '<button class="btn btn-sm" type="button" onclick="editMod(\'' + esc(m.id) + '\')">Edit</button>' +
-                '<button class="btn btn-sm" type="button" onclick="toggleMod(\'' + esc(m.id) + '\')">' +
-                  (m.isActive ? "⏸ Disable" : "▶ Enable") + "</button>" +
-                '<button class="btn btn-sm btn-danger" type="button" onclick="deleteMod(\'' + esc(m.id) + '\',\'' + esc(m.displayName || m.name) + '\')">Delete</button>' +
-              "</div>";
-          }
-
-          return (
-            '<div class="app-card" onclick="openAppDetail(\'' + esc(m.id) + '\')">' +
-              '<div class="app-card-header">' +
-                logo +
-                '<div class="app-info">' +
-                  '<div class="app-name">' + esc(m.displayName || m.name) + '</div>' +
-                  '<div class="app-slug">' + esc(m.name) + '</div>' +
-                  '<div class="app-meta">' +
-                    '<span class="badge ' + (m.isActive ? "badge-active" : "badge-deleted") + '">' + 
-                      (m.isActive ? "Active" : "Disabled") + 
-                    '</span>' +
-                    '<span style="font-size:11px;color:var(--muted)">🔑 ' + esc(String(m.keyCount || 0)) + ' keys</span>' +
-                  '</div>' +
-                '</div>' +
-              '</div>' +
-              (m.description ? '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">' + esc(m.description) + '</div>' : '') +
-              controls +
-            '</div>'
-          );
-        }).join("");
-      } catch (e) {
-        box.innerHTML = '<div class="empty" style="color:var(--danger)">' + esc(e.message) + '</div>';
-      }
-    }
 
     async function moveMod(id, dir) {
       if (!isRuler()) return;
@@ -194,144 +68,189 @@
       if (i < 0) return;
       var j = i + dir;
       if (j < 0 || j >= list.length) return;
-      
-      var tmp = list[i]; 
-      list[i] = list[j]; 
-      list[j] = tmp;
-      
+      var tmp = list[i]; list[i] = list[j]; list[j] = tmp;
       try {
-        await api("/mods/reorder", { method: "POST", body: { modIds: list } });
+        await api("/mods/reorder", { method: "POST", body: { order: list } });
         showToast("Order saved");
         loadMods();
-      } catch (e) { 
-        showToast(e.message || String(e), "error"); 
+      } catch (e) { showToast(e.message || String(e), "error"); }
+    }
+
+    async function loadMods() {
+      var box = document.getElementById("content");
+      try {
+        var res = await api("/mods");
+        modsCache = res.data || [];
+        if (!modsCache.length) {
+          box.innerHTML = '<div class="empty">No apps yet.</div>';
+          return;
+        }
+        box.className = "app-grid";
+        box.innerHTML = modsCache.map(function (m) {
+          var logo = m.logoUrl
+            ? '<img src="' + esc(m.logoUrl) + '" alt="" style="width:44px;height:44px;border-radius:10px;object-fit:cover;background:var(--bg)">'
+            : '<div style="width:44px;height:44px;border-radius:10px;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:18px">' +
+                esc((m.displayName || m.name || "?").charAt(0).toUpperCase()) + "</div>";
+
+          var controls = "";
+          if (isRuler()) {
+            controls =
+              '<div class="app-card-actions" onclick="event.stopPropagation()">' +
+                '<button class="btn btn-sm" type="button" title="Move up" onclick="moveMod(\'' + esc(m.id) + '\',-1)">↑</button>' +
+                '<button class="btn btn-sm" type="button" title="Move down" onclick="moveMod(\'' + esc(m.id) + '\',1)">↓</button>' +
+                '<button class="btn btn-sm" type="button" onclick="editMod(\'' + esc(m.id) + '\')">Edit</button>' +
+                '<button class="btn btn-sm" type="button" onclick="toggleModActive(\'' + esc(m.id) + '\',' + (m.isActive ? "false" : "true") + ')">' +
+                  (m.isActive ? "⏸ Disable" : "▶ Enable") + "</button>" +
+                '<button class="btn btn-sm btn-danger" type="button" onclick="deleteMod(\'' + esc(m.id) + '\',\'' + esc(m.displayName || m.name) + '\')">Delete</button>' +
+              "</div>";
+          }
+
+          return (
+            '<div class="app-card" onclick="openAppDetail(\'' + esc(m.id) + '\')">' +
+              '<div style="display:flex;gap:12px;align-items:center">' +
+                logo +
+                '<div style="flex:1;min-width:0">' +
+                  "<div style=\"display:flex;align-items:center;justify-content:space-between;gap:8px\">" +
+                    "<strong style=\"font-size:15px\">" + esc(m.displayName || m.name) + "</strong>" +
+                    '<span class="badge ' + (m.isActive ? "badge-active" : "badge-deleted") + '">' + (m.isActive ? "active" : "off") + "</span>" +
+                  "</div>" +
+                  '<div style="font-size:12px;color:var(--muted);margin-top:4px">' +
+                    '<span class="mono">' + esc(m.name) + "</span> · v" + esc(m.version || "1.0.0") +
+                    ' · <span style="color:#38bdf8">' + esc(String(m.keyCount || 0)) + "</span>" +
+                  "</div>" +
+                  (isRuler()
+                    ? (function () {
+                        var id = String(m.id || "");
+                        var short = id.length > 12 ? id.slice(0, 6) + "…" + id.slice(-4) : id;
+                        return '<div class="app-id-chip" onclick="event.stopPropagation();copyToClipboard(\'' + esc(id) + '\')" title="Click to copy full ID">' +
+                          '<span style="color:var(--muted)">ID</span> <span class="mono">' + esc(short) + '</span></div>';
+                      })()
+                    : "") +
+                "</div>" +
+              "</div>" +
+              controls +
+            "</div>"
+          );
+        }).join("");
+      } catch (e) {
+        box.innerHTML = '<div class="empty" style="color:var(--danger)">' + esc(e.message) + "</div>";
       }
     }
 
     async function openAppDetail(id) {
       var panel = document.getElementById("detailPanel");
-      if (!panel) {
-        panel = document.createElement('div');
-        panel.id = 'detailPanel';
-        document.getElementById('page-content').insertBefore(panel, document.getElementById('content'));
-      }
-      
       var grid = document.getElementById("content");
-      if (grid) grid.style.display = 'none';
-      
-      panel.style.display = 'block';
-      panel.innerHTML = '<div class="card"><div class="card-body"><div class="empty"><span class="spinner"></span></div></div></div>';
-      
+      if (grid) grid.hidden = true;
+      panel.hidden = false;
+      panel.innerHTML = '<div class="detail-panel"><div class="empty"><span class="spinner"></span></div></div>';
       window.scrollTo({ top: 0, behavior: "smooth" });
-      
       try {
         var modRes = await api("/mods/" + id);
-        var m = modRes.data || {};
-        var pkgRes = await api("/packages");
-        var allPkgs = pkgRes.data || [];
-        var pkgs = allPkgs.filter(function(p) { 
-          return p.modId === id || p.mod_id === id || p.modName === m.name;
-        });
+        var m = modRes.data;
+        var pkgRes = await api("/packages?modId=" + encodeURIComponent(id));
+        var pkgs = pkgRes.data || [];
 
         var pkgHtml = !pkgs.length
-          ? '<div class="empty" style="padding:16px 0">No pricing yet.</div>'
+          ? '<div class="empty" style="padding:16px 0">No pricing yet.' +
+              (isRuler() ? ' <a href="packages.html">Add pricing →</a>' : "") +
+            "</div>"
           : '<div class="price-list">' + pkgs.map(function (p) {
               return (
                 '<div class="price-row">' +
-                  '<div>' +
-                    '<div class="price-name">' + esc(p.name || p.duration + " days") + '</div>' +
-                    '<div class="price-dur">' + esc(p.duration || "") + ' days</div>' +
-                  '</div>' +
-                  '<div style="display:flex;align-items:center;gap:8px">' +
-                    '<span class="price-amt">৳' + esc(String(p.price || 0)) + '</span>' +
-                    '<a class="btn btn-sm btn-primary" href="new-key.html?modId=' + encodeURIComponent(id) + '&packageId=' + encodeURIComponent(p.id) + '">Buy</a>' +
-                  '</div>' +
-                '</div>'
+                  '<div class="price-info">' +
+                    '<div class="price-name">' + esc(p.name || p.duration || "Package") + "</div>" +
+                    '<div class="price-dur">' + esc(p.duration || "") + "</div>" +
+                  "</div>" +
+                  '<div class="price-buy">' +
+                    '<span class="price-amt">' + formatPriceHtml(p.price) + '</span>' +
+                    '<a class="btn btn-sm btn-primary" href="new-key.html?modId=' + encodeURIComponent(id) +
+                      "&packageId=" + encodeURIComponent(p.id) + '">Purchase</a>' +
+                  "</div>" +
+                "</div>"
               );
-            }).join("") + '</div>';
+            }).join("") + "</div>";
 
         panel.innerHTML =
-          '<div class="card">' +
-            '<div class="card-header" style="display:flex;justify-content:space-between;align-items:center">' +
-              '<h2>' + esc(m.displayName || m.name) + '</h2>' +
-              '<div style="display:flex;gap:6px">' +
+          '<div class="detail-panel">' +
+            '<div class="detail-head">' +
+              "<div>" +
+                '<h2 class="detail-title">' + esc(m.displayName || m.name) + "</h2>" +
+                '<p class="detail-sub">' + esc(m.name) + " · v" + esc(m.version || "1.0.0") + "</p>" +
+              "</div>" +
+              '<div class="detail-actions">' +
                 '<a class="btn btn-sm btn-primary" href="new-key.html?modId=' + encodeURIComponent(id) + '">+ Purchase</a>' +
+                (isRuler() ? '<a class="btn btn-sm" href="packages.html?modId=' + encodeURIComponent(id) + '">Edit Pricing</a>' : "") +
                 '<button class="btn btn-sm" type="button" onclick="closeAppDetail()">Close</button>' +
-              '</div>' +
-            '</div>' +
-            '<div class="card-body">' +
-              '<div style="font-size:12px;color:var(--muted);margin-bottom:12px">' +
-                '<span class="mono">' + esc(m.name) + '</span>' +
-                ' · v' + esc(m.version || "1.0.0") +
-                ' · <span class="badge ' + (m.isActive ? "badge-active" : "badge-deleted") + '">' + 
-                  (m.isActive ? "Active" : "Disabled") + 
-                '</span>' +
-              '</div>' +
-              (m.description ? '<p style="font-size:13px;margin-bottom:12px">' + esc(m.description) + '</p>' : '') +
-              '<h3 style="font-size:14px;margin-bottom:8px">Pricing</h3>' +
-              pkgHtml +
-            '</div>' +
-          '</div>';
+              "</div>" +
+            "</div>" +
+            (m.description ? '<p class="detail-desc">' + esc(m.description) + "</p>" : "") +
+            '<h3 class="detail-section">Pricing</h3>' +
+            pkgHtml +
+          "</div>";
       } catch (e) {
         panel.innerHTML =
-          '<div class="card"><div class="card-body">' +
-            '<p style="color:var(--danger)">' + esc(e.message) + '</p>' +
-            '<button class="btn btn-sm" type="button" onclick="closeAppDetail()">Close</button>' +
-          '</div></div>';
+          '<div class="detail-panel"><p style="color:var(--danger)">' + esc(e.message) +
+          '</p><button class="btn btn-sm" type="button" onclick="closeAppDetail()">Close</button></div>';
       }
     }
 
     function closeAppDetail() {
       var panel = document.getElementById("detailPanel");
       var grid = document.getElementById("content");
-      if (panel) { panel.innerHTML = ""; panel.style.display = 'none'; }
-      if (grid) grid.style.display = '';
+      if (panel) { panel.innerHTML = ""; panel.hidden = true; }
+      if (grid) grid.hidden = false;
     }
 
     function showCreateForm() {
       if (!isRuler()) return;
-      var formContainer = document.getElementById("formContainer");
-      formContainer.innerHTML =
-        '<div class="card" style="margin-bottom:12px">' +
-          '<div class="card-header"><h2>Add App</h2></div>' +
-          '<div class="card-body">' +
-            '<form id="modForm">' +
-              '<div class="form-group">' +
-                '<label>App Name *</label>' +
-                '<input type="text" id="modDisplayName" required placeholder="e.g. Fox VPN">' +
-              '</div>' +
-              '<div class="form-group">' +
-                '<label>Description</label>' +
-                '<textarea id="modDescription" rows="2" placeholder="Optional description"></textarea>' +
-              '</div>' +
-              '<div style="display:flex;gap:8px">' +
-                '<button type="submit" class="btn btn-primary">Create</button>' +
-                '<button type="button" class="btn" onclick="document.getElementById(\'formContainer\').innerHTML=\'\'">Cancel</button>' +
-              '</div>' +
-            '</form>' +
+      document.getElementById("formContainer").innerHTML =
+        '<div class="card"><div class="card-header"><h2>Add App</h2></div><div class="card-body">' +
+        '<form id="modForm">' +
+          '<p style="font-size:12px;color:var(--muted);margin:0 0 12px">Fill what you need — empty fields save as blank / defaults.</p>' +
+          '<div class="form-row">' +
+            '<div class="form-group"><label>App name *</label><input type="text" id="modDisplayName" required placeholder="Display name"></div>' +
+            '<div class="form-group"><label>Slug (optional)</label><input type="text" id="modSlug" placeholder="auto from name"></div>' +
           '</div>' +
-        '</div>';
-        
+          '<div class="form-group"><label>Description</label><textarea id="modDescription" rows="2" placeholder="Optional"></textarea></div>' +
+          '<div class="form-row">' +
+            '<div class="form-group"><label>Version</label><input type="text" id="modVersion" placeholder="1.0.0"></div>' +
+            '<div class="form-group"><label>Package name</label><input type="text" id="modPackageName" placeholder="com.example.app"></div>' +
+          '</div>' +
+          '<div class="form-row">' +
+            '<div class="form-group"><label>Min version</label><input type="text" id="modMinVersion" placeholder="Optional"></div>' +
+            '<div class="form-group"><label>Logo URL</label><input type="url" id="modLogo" placeholder="https://..."></div>' +
+          '</div>' +
+          '<div class="form-row">' +
+            '<div class="form-group"><label><input type="checkbox" id="modForceUpdate" style="width:auto;margin-right:6px"> Force update</label></div>' +
+            '<div class="form-group"><label><input type="checkbox" id="modMaintenance" style="width:auto;margin-right:6px"> Maintenance mode</label></div>' +
+          '</div>' +
+          '<button type="submit" class="btn btn-primary">Create</button> ' +
+          '<button type="button" class="btn" onclick="document.getElementById(\'formContainer\').innerHTML=\'\'">Cancel</button>' +
+        '</form></div></div>';
       document.getElementById("modForm").addEventListener("submit", async function (e) {
         e.preventDefault();
         var displayName = document.getElementById("modDisplayName").value.trim();
-        var description = document.getElementById("modDescription").value.trim();
-        
+        var slug = document.getElementById("modSlug").value.trim();
+        var version = document.getElementById("modVersion").value.trim() || "1.0.0";
         try {
           await api("/mods", {
             method: "POST",
             body: {
               displayName: displayName,
-              name: displayName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
-              description: description
+              name: slug || displayName.toLowerCase().replace(/[^a-z0-9]+/g, "").substring(0, 24) || "app",
+              description: document.getElementById("modDescription").value.trim() || "",
+              version: version,
+              packageName: document.getElementById("modPackageName").value.trim() || null,
+              minVersion: document.getElementById("modMinVersion").value.trim() || null,
+              logoUrl: document.getElementById("modLogo").value.trim() || null,
+              forceUpdate: document.getElementById("modForceUpdate").checked,
+              maintenanceMode: document.getElementById("modMaintenance").checked
             }
           });
           showToast("App created");
           document.getElementById("formContainer").innerHTML = "";
           loadMods();
-        } catch (err) { 
-          showToast(err.message, "error"); 
-        }
+        } catch (err) { showToast(err.message, "error"); }
       });
     }
 
@@ -339,34 +258,18 @@
       if (!isRuler()) return;
       try {
         var res = await api("/mods/" + id);
-        var m = res.data || {};
-        var formContainer = document.getElementById("formContainer");
-        
-        formContainer.innerHTML =
-          '<div class="card" style="margin-bottom:12px">' +
-            '<div class="card-header"><h2>Edit: ' + esc(m.displayName || m.name) + '</h2></div>' +
-            '<div class="card-body">' +
-              '<form id="editModForm">' +
-                '<div class="form-group">' +
-                  '<label>App Name</label>' +
-                  '<input type="text" id="editDisplayName" value="' + esc(m.displayName || m.name) + '">' +
-                '</div>' +
-                '<div class="form-group">' +
-                  '<label>Description</label>' +
-                  '<textarea id="editDescription" rows="2">' + esc(m.description || "") + '</textarea>' +
-                '</div>' +
-                '<div class="form-group">' +
-                  '<label><input type="checkbox" id="editIsActive" style="width:auto;margin-right:6px" ' + 
-                    (m.isActive ? "checked" : "") + '> Enabled</label>' +
-                '</div>' +
-                '<div style="display:flex;gap:8px">' +
-                  '<button type="submit" class="btn btn-primary">Save</button>' +
-                  '<button type="button" class="btn" onclick="document.getElementById(\'formContainer\').innerHTML=\'\'">Cancel</button>' +
-                '</div>' +
-              '</form>' +
-            '</div>' +
-          '</div>';
-          
+        var m = res.data;
+        document.getElementById("formContainer").innerHTML =
+          '<div class="card"><div class="card-header"><h2>Edit: ' + esc(m.displayName || m.name) + "</h2></div><div class=\"card-body\">" +
+          '<form id="editModForm">' +
+            '<div class="form-group"><label>App Name</label><input type="text" id="editDisplayName" value="' + esc(m.displayName || m.name) + '"></div>' +
+            '<div class="form-group"><label>Logo URL</label><input type="url" id="editLogo" value="' + esc(m.logoUrl || "") + '"></div>' +
+            '<div class="form-group"><label>Version</label><input type="text" id="editVersion" value="' + esc(m.version || "1.0.0") + '"></div>' +
+            '<div class="form-group"><label>Description</label><textarea id="editDescription" rows="2">' + esc(m.description || "") + "</textarea></div>" +
+            '<div class="form-group"><label><input type="checkbox" id="editIsActive" style="width:auto;margin-right:6px" ' + (m.isActive ? "checked" : "") + ">Enabled</label></div>" +
+            '<button type="submit" class="btn btn-primary">Save</button> ' +
+            '<button type="button" class="btn" onclick="document.getElementById(\'formContainer\').innerHTML=\'\'">Cancel</button>' +
+          "</form></div></div>";
         document.getElementById("editModForm").addEventListener("submit", async function (e) {
           e.preventDefault();
           try {
@@ -374,47 +277,41 @@
               method: "PATCH",
               body: {
                 displayName: document.getElementById("editDisplayName").value.trim(),
-                description: document.getElementById("editDescription").value.trim(),
+                logoUrl: document.getElementById("editLogo").value.trim() || null,
+                version: document.getElementById("editVersion").value.trim(),
+                description: document.getElementById("editDescription").value.trim() || null,
                 isActive: document.getElementById("editIsActive").checked
               }
             });
             showToast("Saved");
             document.getElementById("formContainer").innerHTML = "";
             loadMods();
-          } catch (err) { 
-            showToast(err.message, "error"); 
-          }
+          } catch (err) { showToast(err.message, "error"); }
         });
-        
         window.scrollTo({ top: 0, behavior: "smooth" });
-      } catch (e) { 
-        showToast(e.message, "error"); 
-      }
+      } catch (e) { showToast(e.message, "error"); }
     }
 
-    async function toggleMod(id) {
+    async function toggleModActive(id, active) {
       if (!isRuler()) return;
       try {
-        var res = await api("/mods/" + id + "/toggle", { method: "POST" });
-        showToast(res.message || (res.isActive ? "Enabled" : "Disabled"));
+        await api("/mods/" + id, { method: "PATCH", body: { isActive: active } });
+        showToast(active ? "Enabled" : "Disabled");
         loadMods();
-      } catch (e) { 
-        showToast(e.message, "error"); 
-      }
+      } catch (e) { showToast(e.message, "error"); }
     }
 
     async function deleteMod(id, name) {
       if (!isRuler()) return;
-      if (!confirm('Delete app "' + name + '" and all its keys permanently?')) return;
+      if (!confirm("HARD DELETE app \"" + name + "\" and ALL its keys/packages permanently?")) return;
       try {
-        await api("/mods/" + id, { method: "DELETE" });
-        showToast("App deleted");
-        closeAppDetail();
+        await api("/mods/" + id + "?hard=1", { method: "DELETE" });
+        showToast("App hard deleted");
+        document.getElementById("detailPanel").innerHTML = "";
         loadMods();
-      } catch (e) { 
-        showToast(e.message, "error"); 
-      }
+      } catch (e) { showToast(e.message, "error"); }
     }
   </script>
 </body>
 </html>
+
