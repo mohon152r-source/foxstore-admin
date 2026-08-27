@@ -15,7 +15,7 @@ function getApiBase() {
     var saved = localStorage.getItem("dfox_api_base");
     if (saved && !/onrender\.com/i.test(saved)) return saved.replace(/\/$/, "");
   } catch (e) {}
-  return "https://fox-store-api.onrender.com";
+  return "https://foxstore-api.mohon153r.workers.dev";
 }
 var API_BASE = getApiBase();
 
@@ -532,3 +532,191 @@ function getNavLinks() {
   ];
 }
 
+// ==================== ADDITIONAL API FUNCTIONS ====================
+
+// Key Management Functions
+async function getKeys(searchQuery) {
+  var endpoint = "/keys";
+  if (searchQuery) endpoint += "?q=" + encodeURIComponent(searchQuery);
+  return api(endpoint);
+}
+
+async function getKeyDetail(keyId) {
+  return api("/keys/" + keyId);
+}
+
+async function createKey(keyData) {
+  return api("/keys", { method: "POST", body: keyData });
+}
+
+async function extendKey(keyId, days, hours, minutes) {
+  return api("/keys/" + keyId + "/extend", {
+    method: "POST",
+    body: { days: days || 0, hours: hours || 0, minutes: minutes || 0 }
+  });
+}
+
+async function resetHwid(keyId) {
+  return api("/keys/" + keyId + "/hwid-reset", { method: "POST" });
+}
+
+async function pauseKey(keyId) {
+  return api("/keys/" + keyId + "/pause", { method: "POST" });
+}
+
+async function resumeKey(keyId) {
+  return api("/keys/" + keyId + "/resume", { method: "POST" });
+}
+
+async function banKey(keyId) {
+  return api("/keys/" + keyId + "/ban", { method: "POST" });
+}
+
+async function unbanKey(keyId) {
+  return api("/keys/" + keyId + "/unban", { method: "POST" });
+}
+
+async function deleteKey(keyId) {
+  return api("/keys/" + keyId + "/delete", { method: "DELETE" });
+}
+
+function exportKeys() {
+  var token = getToken();
+  if (!token) return;
+  window.open(getApiBase() + "/api/admin/keys/export", "_blank");
+}
+
+// Package Management Functions
+async function getPackages() {
+  return api("/packages");
+}
+
+async function createPackage(packageData) {
+  return api("/packages", { method: "POST", body: packageData });
+}
+
+async function updatePackage(packageId, packageData) {
+  return api("/packages/" + packageId, { method: "PATCH", body: packageData });
+}
+
+async function deletePackage(packageId) {
+  return api("/packages/" + packageId, { method: "DELETE" });
+}
+
+async function reorderPackages(packageIds) {
+  return api("/packages/reorder", { method: "POST", body: { packageIds: packageIds } });
+}
+
+// Mod Management Functions
+async function getMods() {
+  return api("/mods");
+}
+
+async function createMod(modData) {
+  return api("/mods", { method: "POST", body: modData });
+}
+
+async function updateMod(modId, modData) {
+  return api("/mods/" + modId, { method: "PATCH", body: modData });
+}
+
+async function deleteMod(modId) {
+  return api("/mods/" + modId, { method: "DELETE" });
+}
+
+async function toggleMod(modId) {
+  return api("/mods/" + modId + "/toggle", { method: "POST" });
+}
+
+async function reorderMods(modIds) {
+  return api("/mods/reorder", { method: "POST", body: { modIds: modIds } });
+}
+
+// Reseller Management Functions
+async function getResellers() {
+  return api("/resellers");
+}
+
+async function createReseller(resellerData) {
+  return api("/resellers", { method: "POST", body: resellerData });
+}
+
+async function getResellerDetail(resellerId) {
+  return api("/resellers/" + resellerId + "/zoom");
+}
+
+async function rechargeReseller(resellerId, amount) {
+  return api("/resellers/" + resellerId + "/recharge", { method: "POST", body: { amount: amount } });
+}
+
+async function setResellerBalance(resellerId, balance) {
+  return api("/resellers/" + resellerId + "/set-balance", { method: "POST", body: { balance: balance } });
+}
+
+async function setResellerDiscount(resellerId, discountPercent) {
+  return api("/resellers/" + resellerId + "/set-discount", { method: "POST", body: { discountPercent: discountPercent } });
+}
+
+async function deleteReseller(resellerId) {
+  return api("/resellers/" + resellerId, { method: "DELETE" });
+}
+
+// Branding Functions
+async function getBranding() {
+  return api("/settings/branding");
+}
+
+async function saveBranding(brandingData) {
+  return api("/settings/branding", { method: "POST", body: brandingData });
+}
+
+// Wallet Functions
+async function getWalletInfo() {
+  return api("/wallets/me");
+}
+
+// Stats Functions
+async function getStats() {
+  return api("/stats");
+}
+
+// Audit Functions
+async function getAuditLogs() {
+  return api("/audit");
+}
+
+// Export all functions to global scope
+window.getKeys = getKeys;
+window.getKeyDetail = getKeyDetail;
+window.createKey = createKey;
+window.extendKey = extendKey;
+window.resetHwid = resetHwid;
+window.pauseKey = pauseKey;
+window.resumeKey = resumeKey;
+window.banKey = banKey;
+window.unbanKey = unbanKey;
+window.deleteKey = deleteKey;
+window.exportKeys = exportKeys;
+window.getPackages = getPackages;
+window.createPackage = createPackage;
+window.updatePackage = updatePackage;
+window.deletePackage = deletePackage;
+window.reorderPackages = reorderPackages;
+window.getMods = getMods;
+window.createMod = createMod;
+window.updateMod = updateMod;
+window.deleteMod = deleteMod;
+window.toggleMod = toggleMod;
+window.reorderMods = reorderMods;
+window.getResellers = getResellers;
+window.createReseller = createReseller;
+window.getResellerDetail = getResellerDetail;
+window.rechargeReseller = rechargeReseller;
+window.setResellerBalance = setResellerBalance;
+window.setResellerDiscount = setResellerDiscount;
+window.deleteReseller = deleteReseller;
+window.getBranding = getBranding;
+window.saveBranding = saveBranding;
+window.getWalletInfo = getWalletInfo;
+window.getStats = getStats;
+window.getAuditLogs = getAuditLogs;
