@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -13,29 +13,149 @@
   <title>Key Detail — Fox Store</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
-    .tabs { display:flex; gap:0; border-bottom:1px solid var(--border); margin-bottom:16px; overflow-x:auto; }
+    .tabs { 
+      display: flex; 
+      gap: 0; 
+      border-bottom: 1px solid var(--border); 
+      margin-bottom: 16px; 
+      overflow-x: auto; 
+    }
     .tab {
-      padding:10px 16px; cursor:pointer; border-bottom:2px solid transparent;
-      color:var(--muted); font-size:13px; white-space:nowrap; background:none; border-top:none; border-left:none; border-right:none;
+      padding: 10px 16px; 
+      cursor: pointer; 
+      border-bottom: 2px solid transparent;
+      color: var(--muted); 
+      font-size: 13px; 
+      white-space: nowrap; 
+      background: none; 
+      border-top: none; 
+      border-left: none; 
+      border-right: none;
     }
-    .tab.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
-    .tab-content { display:none; }
-    .tab-content.active { display:block; }
+    .tab.active { 
+      color: var(--primary); 
+      border-bottom-color: var(--primary); 
+      font-weight: 600; 
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .detail-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .detail-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .key-code-display {
+      font-size: 20px;
+      font-weight: 700;
+      word-break: break-all;
+      color: var(--primary);
+      font-family: monospace;
+    }
+    .snap-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .snap-cell {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .snap-cell .k { 
+      font-size: 10px; 
+      color: var(--muted); 
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .snap-cell .v { 
+      font-size: 16px; 
+      font-weight: 700; 
+    }
+    
     .kv {
-      display:flex; justify-content:space-between; gap:12px;
-      padding:10px 0; border-bottom:1px solid var(--border); font-size:13px;
+      display: flex; 
+      justify-content: space-between; 
+      gap: 12px;
+      padding: 10px 0; 
+      border-bottom: 1px solid var(--border); 
+      font-size: 13px;
     }
-    .kv:last-child { border-bottom:none; }
-    .kv .k { color:var(--muted); flex-shrink:0; }
-    .kv .v { text-align:right; word-break:break-all; color:var(--fg); }
-    .action-grid { display:flex; flex-wrap:wrap; gap:8px; }
+    .kv:last-child { border-bottom: none; }
+    .kv .k { color: var(--muted); flex-shrink: 0; }
+    .kv .v { text-align: right; word-break: break-all; color: var(--fg); }
+    
+    .action-grid { 
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 8px; 
+      margin-bottom: 16px;
+    }
+    
     .status-dot {
-      width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px;
-      background:var(--muted);
+      width: 8px; 
+      height: 8px; 
+      border-radius: 50%; 
+      display: inline-block; 
+      margin-right: 6px;
+      background: var(--muted);
     }
-    .status-dot.on { background:#34d399; box-shadow:0 0 8px #34d39988; }
-    .status-dot.warn { background:#fbbf24; }
-    .status-dot.off { background:#f87171; }
+    .status-dot.on { background: #34d399; box-shadow: 0 0 8px #34d39988; }
+    .status-dot.warn { background: #fbbf24; }
+    .status-dot.off { background: #f87171; }
+    
+    .device-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .device-card.is-banned {
+      border-color: rgba(239, 68, 68, 0.5);
+      background: rgba(239, 68, 68, 0.05);
+    }
+    .log-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+    .log-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .log-action {
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    .log-time {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .log-who {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .log-body {
+      font-size: 12px;
+      color: var(--fg);
+    }
   </style>
 </head>
 <body>
@@ -43,21 +163,12 @@
   <script src="js/config.js"></script>
   <script src="js/app.js"></script>
   <script>
-    var keyId = new URLSearchParams(window.location.search).get("id") || (location.hash.match(/id=([^&]+)/) || [])[1];
+    var keyId = new URLSearchParams(window.location.search).get("id");
     var keyData = null;
     var canManage = false;
 
     function rowHtml(label, valueHtml) {
       return '<div class="kv"><span class="k">' + esc(label) + '</span><span class="v">' + valueHtml + '</span></div>';
-    }
-
-    function normalizeDevices(d) {
-      if (!d) return [];
-      if (Array.isArray(d)) return d;
-      if (typeof d === "string") {
-        try { var p = JSON.parse(d); return Array.isArray(p) ? p : []; } catch (e) { return []; }
-      }
-      return [];
     }
 
     function statusColor(st) {
@@ -79,16 +190,18 @@
     function showTab(name) {
       document.querySelectorAll(".tab").forEach(function (t) { t.classList.remove("active"); });
       document.querySelectorAll(".tab-content").forEach(function (t) { t.classList.remove("active"); });
+      
+      var tabMap = { general: 0, devices: 1, security: 2, logs: 3 };
       var tabs = document.querySelectorAll(".tab");
-      var map = { general: 0, customer: 1, devices: 2, security: 3, logs: 4 };
-      if (tabs[map[name]]) tabs[map[name]].classList.add("active");
+      if (tabs[tabMap[name]]) tabs[tabMap[name]].classList.add("active");
+      
       var el = document.getElementById("tab-" + name);
       if (el) el.classList.add("active");
     }
 
     requireAuth();
     document.addEventListener("auth-ready", function () {
-      canManage = isManager() || hasPerm("key_pause") || hasPerm("key_resume") || hasPerm("key_ban") || hasPerm("key_unban") || hasPerm("key_hwid_reset");
+      canManage = isManager();
       if (!keyId) { window.location.href = "keys.html"; return; }
       mountShell("Keys");
       document.getElementById("page-content").innerHTML = '<div class="empty"><span class="spinner"></span></div>';
@@ -101,124 +214,115 @@
         var res = await api("/keys/" + encodeURIComponent(keyId));
         keyData = res.data || {};
         var k = keyData;
-        k.devices = normalizeDevices(k.devices);
-        var days = typeof daysUntil === "function" ? daysUntil(k.expiresAt) : null;
+        
+        var days = k.expiresAt ? daysUntil(k.expiresAt) : null;
         var isTrial = k.keyType === "trial";
         var stColor = statusColor(k.status);
-        var accessLabel = (k.access === -1 || k.access >= 9999) ? "Unlimited" : String(k.access || 0);
+        var accessLabel = (k.access === -1 || k.access >= 9999) ? "Unlimited" : String(k.access || 1);
 
-        var actions = "";
+        // Actions
         var actParts = [];
-        if (k.status === "paused" && hasPerm("key_resume")) {
-          actParts.push('<button class="btn btn-sm" style="color:var(--success)" type="button" onclick="resumeKey()">Resume</button>');
-        } else if (k.status !== "paused" && hasPerm("key_pause")) {
-          actParts.push('<button class="btn btn-sm" style="color:var(--warning)" type="button" onclick="pauseKey()" ' + (k.status === "banned" ? "disabled" : "") + '>Pause</button>');
-        }
-        if (k.status === "banned" && hasPerm("key_unban")) {
-          actParts.push('<button class="btn btn-sm" style="color:var(--success)" type="button" onclick="unbanKey()">Unban</button>');
-        } else if (k.status !== "banned" && hasPerm("key_ban")) {
-          actParts.push('<button class="btn btn-sm" style="color:var(--danger)" type="button" onclick="banKey()">Ban</button>');
-        }
-        if (hasPerm("key_hwid_reset")) {
-          actParts.push('<button class="btn btn-sm" type="button" onclick="hwidReset()" ' + (k.devices.length === 0 ? "disabled" : "") + '>Reset HWID (' + esc(String(k.resetCount || 0)) + ')</button>');
-        }
-        if (hasPerm("key_extend") || hasPerm("key_reduce") || (typeof isManager === "function" && isManager())) {
-          var canExt = hasPerm("key_extend") || (typeof isManager === "function" && isManager());
-          var canRed = hasPerm("key_reduce") || (typeof isManager === "function" && isManager());
-          var inp = 'style="width:64px;padding:8px 8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--fg)"';
-          actParts.push(
-            '<div class="validity-adjust" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%">' +
-              '<span style="font-size:12px;color:var(--muted);width:100%">Adjust validity</span>' +
-              '<label style="font-size:11px;color:var(--muted)">D</label>' +
-              '<input type="number" id="validityDays" value="0" min="0" max="3650" ' + inp + '>' +
-              '<label style="font-size:11px;color:var(--muted)">H</label>' +
-              '<input type="number" id="validityHours" value="0" min="0" max="23" ' + inp + '>' +
-              '<label style="font-size:11px;color:var(--muted)">M</label>' +
-              '<input type="number" id="validityMinutes" value="0" min="0" max="59" ' + inp + '>' +
-              (canExt ? '<button class="btn btn-sm btn-primary" type="button" onclick="adjustValidity(1)">Extend</button>' : '') +
-              (canRed ? '<button class="btn btn-sm" type="button" onclick="adjustValidity(-1)" style="border-color:rgba(251,191,36,0.5);color:#fbbf24">Reduce</button>' : '') +
-            '</div>'
-          );
-        }
-        if (isManager()) {
-          actParts.push('<button class="btn btn-sm btn-danger" type="button" onclick="hardDeleteKey()">Delete</button>');
-        }
-        if (actParts.length) {
-          actions =
-            '<div class="card" style="margin-bottom:16px"><div class="card-header"><h2>Actions</h2></div><div class="card-body">' +
-              '<div class="action-grid">' + actParts.join("") + '</div></div></div>';
+        
+        if (canManage) {
+          if (k.status === "paused") {
+            actParts.push('<button class="btn btn-sm" style="color:var(--success)" type="button" onclick="resumeKey()">Resume</button>');
+          } else if (k.status !== "banned") {
+            actParts.push('<button class="btn btn-sm" style="color:var(--warning)" type="button" onclick="pauseKey()">Pause</button>');
+          }
+          
+          if (k.status === "banned") {
+            actParts.push('<button class="btn btn-sm" style="color:var(--success)" type="button" onclick="unbanKey()">Unban</button>');
+          } else {
+            actParts.push('<button class="btn btn-sm" style="color:var(--danger)" type="button" onclick="banKey()">Ban</button>');
+          }
+          
+          actParts.push('<button class="btn btn-sm" type="button" onclick="hwidReset()">Reset HWID</button>');
+          actParts.push('<button class="btn btn-sm btn-danger" type="button" onclick="deleteKey()">Delete</button>');
         }
 
-        var isRulerUser = typeof isRuler === "function" && isRuler();
-        var deviceList = k.devices.length === 0
+        // Validity adjustment
+        actParts.push(
+          '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
+            '<input type="number" id="validityDays" value="0" min="0" style="width:60px;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg)"> days' +
+            '<button class="btn btn-sm btn-primary" type="button" onclick="adjustValidity(1)">Extend</button>' +
+            '<button class="btn btn-sm" type="button" onclick="adjustValidity(-1)" style="border-color:rgba(251,191,36,0.5);color:#fbbf24">Reduce</button>' +
+          '</div>'
+        );
+
+        var actionsHtml = actParts.length
+          ? '<div class="action-grid">' + actParts.join("") + '</div>'
+          : '';
+
+        // Devices
+        var devices = k.devices || [];
+        var deviceList = devices.length === 0
           ? '<div class="empty">No devices bound yet.</div>'
-          : k.devices.map(function (d) {
-              var exp = d.expiresAt ? formatDate(d.expiresAt) : "—";
-              var banned = d.isBanned === true || d.isBanned === "t" || d.isBanned === "true";
-              var actions = "";
-              if (isRulerUser) {
-                actions =
-                  '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
-                  (banned
-                    ? '<button class="btn btn-sm" type="button" onclick="unbanDevice(\'' + esc(d.deviceId || "") + '\')">Unban</button>'
-                    : '<button class="btn btn-sm btn-danger" type="button" onclick="banDevice(\'' + esc(d.deviceId || "") + '\')">Ban</button>') +
-                  '<button class="btn btn-sm" type="button" onclick="unbindDevice(\'' + esc(d.deviceId || "") + '\')">Unbind</button>' +
-                  "</div>";
-              }
-              return '<div class="device-card' + (banned ? " is-banned" : "") + '">' +
-                '<div style="min-width:0;flex:1">' +
-                  '<code class="mono">' + esc(d.deviceId || "") + "</code>" +
-                  (banned ? ' <span class="badge badge-banned">banned</span>' : "") +
-                  '<div style="font-size:11px;color:var(--muted);margin-top:4px">' +
-                    (d.deviceName || d.brand || d.model
-                      ? esc([d.brand, d.model, d.deviceName].filter(Boolean).join(" · ")) + " · "
-                      : "") +
-                    "First: " + esc(formatDate(d.firstSeenAt)) +
-                    " · Last: " + esc(formatDate(d.lastSeenAt)) +
-                    (isTrial ? ' · Exp: <span style="color:#c084fc">' + esc(exp) + "</span>" : "") +
-                    (banned && d.banReason ? " · " + esc(d.banReason) : "") +
-                  "</div></div>" +
-                actions +
-              "</div>";
+          : devices.map(function (d) {
+              var deviceId = typeof d === 'string' ? d : (d.deviceId || d.device_id || 'Unknown');
+              var deviceName = typeof d === 'string' ? '' : (d.deviceName || d.device_name || '');
+              var lastActive = typeof d === 'string' ? '' : (d.lastActive || d.last_active || d.lastSeenAt || '');
+              var isBanned = typeof d === 'object' && (d.isBanned || d.is_banned);
+              
+              return '<div class="device-card' + (isBanned ? " is-banned" : "") + '">' +
+                '<div style="flex:1;min-width:0">' +
+                  '<code style="font-size:12px">' + esc(deviceId) + '</code>' +
+                  (isBanned ? ' <span class="badge badge-banned">banned</span>' : '') +
+                  (deviceName ? '<div style="font-size:11px;color:var(--muted);margin-top:4px">' + esc(deviceName) + '</div>' : '') +
+                  (lastActive ? '<div style="font-size:11px;color:var(--muted)">Last: ' + esc(formatDate(lastActive)) + '</div>' : '') +
+                '</div>' +
+              '</div>';
             }).join("");
 
         root.innerHTML =
-          '<div style="margin-bottom:12px"><a href="keys.html" style="font-size:13px;color:var(--muted)">← Back to keys</a></div>' +
+          '<div style="margin-bottom:12px">' +
+            '<a href="keys.html" style="font-size:13px;color:var(--muted)">← Back to keys</a>' +
+          '</div>' +
 
-          '<div class="detail-panel" style="margin-bottom:14px">' +
+          '<div class="detail-panel">' +
             '<div class="detail-head">' +
-              '<div style="min-width:0;flex:1">' +
+              '<div style="flex:1;min-width:0">' +
                 '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">LICENSE KEY</div>' +
-                '<div class="key-code" style="font-size:18px;word-break:break-all">' + esc(k.key || "—") + '</div>' +
+                '<div class="key-code-display">' + esc(k.key || "—") + '</div>' +
                 '<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">' +
-                  '<span class="badge" style="color:' + stColor + ';border-color:' + stColor + '55">' +
+                  '<span class="badge" style="color:' + stColor + ';border:1px solid ' + stColor + '55;padding:4px 10px;border-radius:6px">' +
                     '<span class="status-dot ' + statusDotClass(k.status) + '"></span>' + esc(k.status || "—") +
                   '</span>' +
                   (isTrial
-                    ? '<span class="badge badge-info">Trial · ' + esc(k.trialDuration || "") + '</span>'
+                    ? '<span class="badge badge-info">Trial</span>'
                     : '<span class="badge badge-info">Regular</span>') +
-                  '<span style="font-size:12px;color:var(--muted)">' + esc(k.modDisplayName || k.modName || "") + '</span>' +
+                  '<span style="font-size:12px;color:var(--muted)">' + esc(k.modName || k.modDisplayName || "—") + '</span>' +
                 '</div>' +
               '</div>' +
               '<button class="btn btn-sm btn-primary" type="button" onclick="copyKey()">Copy</button>' +
             '</div>' +
-            '<div class="snap-grid" style="margin-top:4px">' +
-              '<div class="snap-cell"><div class="k">Devices</div><div class="v" style="color:#38bdf8">' + esc(String(k.devices.length)) + ' / ' + esc(accessLabel) + '</div></div>' +
-              '<div class="snap-cell"><div class="k">' + (isTrial ? "Trial" : "Expires") + '</div><div class="v" style="color:' + (days === 0 ? "var(--danger)" : "var(--fg)") + '">' +
-                esc(isTrial ? (k.trialDuration || "on login") : (formatDate(k.expiresAt) || "—")) + '</div></div>' +
-              '<div class="snap-cell"><div class="k">Seller</div><div class="v">' + esc(k.sellerName || "—") + '</div></div>' +
-              '<div class="snap-cell"><div class="k">Created</div><div class="v" style="font-size:13px">' + esc(formatDate(k.createdAt)) + '</div></div>' +
+            
+            '<div class="snap-grid">' +
+              '<div class="snap-cell">' +
+                '<div class="k">Devices</div>' +
+                '<div class="v" style="color:#38bdf8">' + esc(String(devices.length)) + ' / ' + esc(accessLabel) + '</div>' +
+              '</div>' +
+              '<div class="snap-cell">' +
+                '<div class="k">' + (isTrial ? "Duration" : "Expires") + '</div>' +
+                '<div class="v" style="color:' + (days !== null && days <= 0 ? "var(--danger)" : "var(--fg)") + '">' +
+                  esc(isTrial ? (k.trialDuration || k.duration || "—") : (k.expiresAt ? formatDate(k.expiresAt) : "—")) +
+                '</div>' +
+              '</div>' +
+              '<div class="snap-cell">' +
+                '<div class="k">Status</div>' +
+                '<div class="v" style="color:' + stColor + '">' + esc(k.status || "—") + '</div>' +
+              '</div>' +
+              '<div class="snap-cell">' +
+                '<div class="k">Created</div>' +
+                '<div class="v" style="font-size:13px">' + esc(k.createdAt ? formatDate(k.createdAt) : "—") + '</div>' +
+              '</div>' +
             '</div>' +
           '</div>' +
 
-          
-
-          actions +
+          actionsHtml +
 
           '<div class="tabs">' +
             '<button type="button" class="tab active" onclick="showTab(\'general\')">General</button>' +
-            '<button type="button" class="tab" onclick="showTab(\'customer\')">Customer</button>' +
-            '<button type="button" class="tab" onclick="showTab(\'devices\')">Devices (' + esc(String(k.devices.length)) + ')</button>' +
+            '<button type="button" class="tab" onclick="showTab(\'devices\')">Devices (' + esc(String(devices.length)) + ')</button>' +
             '<button type="button" class="tab" onclick="showTab(\'security\')">Security</button>' +
             '<button type="button" class="tab" onclick="showTab(\'logs\')">Logs</button>' +
           '</div>' +
@@ -226,45 +330,29 @@
           '<div id="tab-general" class="tab-content active">' +
             '<div class="card"><div class="card-body">' +
               rowHtml("Status", '<span style="color:' + stColor + ';font-weight:600">' + esc(k.status || "—") + '</span>') +
-              rowHtml("Type", isTrial ? ('<span style="color:#c084fc">Trial</span> · ' + esc(k.trialDuration || "")) : '<span style="color:#60a5fa">Regular</span>') +
-              rowHtml("App", esc(k.modDisplayName || k.modName || "—")) +
-              rowHtml("Seller / provider", esc(k.sellerName || k.provider || "—")) +
+              rowHtml("Type", isTrial ? "Trial" : "Regular") +
+              rowHtml("App", esc(k.modName || k.modDisplayName || "—")) +
               rowHtml("Max devices", esc(accessLabel)) +
-              rowHtml("Uses", esc(String(k.usedCount != null ? k.usedCount : 0)) + (k.maxUses != null && k.maxUses !== -1 ? " / " + esc(String(k.maxUses)) : "")) +
-              rowHtml("Expires", isTrial ? '<span style="color:#c084fc">Per device on first login</span>' : esc(formatDate(k.expiresAt))) +
-              rowHtml("Last used", esc(formatDate(k.lastUsedAt) || "—")) +
-              rowHtml("Wallet charge", k.walletCharge != null ? ('৳' + esc(String(k.walletCharge))) : "—") +
-              rowHtml("Selling price", k.sellingPrice != null ? ('৳' + esc(String(k.sellingPrice))) : "—") +
-              rowHtml("Key ID", '<code class="mono" style="font-size:11px;color:var(--muted)">' + esc(k.id || "") + '</code>') +
-            '</div></div>' +
-          '</div>' +
-
-          '<div id="tab-customer" class="tab-content">' +
-            '<div class="card"><div class="card-body">' +
-              rowHtml("Name", esc(k.customerName || "—")) +
-              rowHtml("Note", esc(k.customerNote || "—")) +
-              rowHtml("Seller", esc(k.sellerName || "—")) +
+              rowHtml("Expires", isTrial ? 'Per device on first login' : esc(k.expiresAt ? formatDate(k.expiresAt) : "—")) +
+              rowHtml("Created", esc(k.createdAt ? formatDate(k.createdAt) : "—")) +
+              rowHtml("Key ID", '<code style="font-size:11px;color:var(--muted)">' + esc(k.id || "") + '</code>') +
             '</div></div>' +
           '</div>' +
 
           '<div id="tab-devices" class="tab-content">' +
-            '<div class="card"><div class="card-header"><h2>Bound devices</h2></div><div class="card-body">' + deviceList + '</div></div>' +
+            '<div class="card"><div class="card-body">' + deviceList + '</div></div>' +
           '</div>' +
 
           '<div id="tab-security" class="tab-content">' +
             '<div class="card"><div class="card-body">' +
               rowHtml("HWID resets", esc(String(k.resetCount || 0))) +
               rowHtml("Pause reason", esc(k.pauseReason || "—")) +
-              rowHtml("Paused at", esc(formatDate(k.pausedAt) || "—")) +
               rowHtml("Ban reason", esc(k.banReason || "—")) +
-              rowHtml("Banned at", esc(formatDate(k.bannedAt) || "—")) +
-              rowHtml("Activated at", esc(formatDate(k.activatedAt) || "—")) +
             '</div></div>' +
           '</div>' +
 
           '<div id="tab-logs" class="tab-content">' +
-            '<div class="card"><div class="card-header"><h2>Key activity</h2></div>' +
-            '<div class="card-body"><div class="log-list" id="keyLogs"><div class="empty"><span class="spinner"></span></div></div></div></div>' +
+            '<div class="card"><div class="card-body"><div id="keyLogs"><div class="empty"><span class="spinner"></span></div></div></div></div>' +
           '</div>';
 
         loadKeyLogs();
@@ -275,50 +363,40 @@
 
     async function loadKeyLogs() {
       var el = document.getElementById("keyLogs");
+      if (!el) return;
+      
       try {
         var res = await api("/keys/" + encodeURIComponent(keyId) + "/logs");
         var logs = res.data || [];
+        
         if (!logs.length) {
           el.innerHTML = '<div class="empty">No logs yet.</div>';
           return;
         }
+        
         el.innerHTML = logs.map(function (l) {
           var action = (l.action || l.type || "log").toString();
-          var when = formatDate(l.createdAt || l.timestamp || l.time) || "—";
-          var who = l.performedByName || l.performedBy || l.admin || l.actor || "";
-          var details = l.details;
-          if (typeof details === "string") {
-            try { details = JSON.parse(details); } catch (e) { /* keep string */ }
+          var when = l.createdAt || l.timestamp || l.time || "";
+          var details = l.details || l.message || "";
+          
+          if (typeof details === "object") {
+            try { details = JSON.stringify(details); } catch (e) { details = String(details); }
           }
-          var rows = "";
-          if (details && typeof details === "object" && !Array.isArray(details)) {
-            rows = Object.keys(details).map(function (k) {
-              var v = details[k];
-              if (v == null) v = "—";
-              else if (typeof v === "object") {
-                try { v = JSON.stringify(v); } catch (e) { v = String(v); }
-              }
-              return '<div class="log-kv"><span class="log-k">' + esc(k) + '</span><span class="log-v">' + esc(String(v)) + '</span></div>';
-            }).join("");
-          } else if (details != null && details !== "") {
-            rows = '<div class="log-kv"><span class="log-v">' + esc(String(details)) + '</span></div>';
-          }
+          
           var color = "#94a3b8";
           var a = action.toLowerCase();
           if (/creat|generat|extend|activ|resume|unban|success/.test(a)) color = "#34d399";
           else if (/pause|reduc|warn/.test(a)) color = "#fbbf24";
           else if (/ban|delete|fail|error|revok/.test(a)) color = "#f87171";
           else if (/login|bind|device/.test(a)) color = "#60a5fa";
-          return (
-            '<div class="log-card" style="border-left:3px solid ' + color + '">' +
-              '<div class="log-card-top">' +
-                '<span class="log-action" style="color:' + color + '">' + esc(action) + '</span>' +
-                '<span class="log-time">' + esc(when) + '</span>' +
-              '</div>' +
-              (who ? '<div class="log-who">by ' + esc(String(who)) + '</div>' : '') +
-              (rows ? '<div class="log-body">' + rows + '</div>' : '') +
-            '</div>'
-          );
+          
+          return '<div class="log-card" style="border-left:3px solid ' + color + '">' +
+            '<div class="log-card-top">' +
+              '<span class="log-action" style="color:' + color + '">' + esc(action) + '</span>' +
+              '<span class="log-time">' + esc(when ? formatDate(when) : "—") + '</span>' +
+            '</div>' +
+            (details ? '<div class="log-body">' + esc(String(details)) + '</div>' : '') +
+          '</div>';
         }).join("");
       } catch (e) {
         if (el) el.innerHTML = '<div class="empty">' + esc(e.message || String(e)) + '</div>';
@@ -328,137 +406,83 @@
     function copyKey() {
       if (keyData && keyData.key) copyToClipboard(keyData.key);
     }
+    
     async function adjustValidity(sign) {
-      var days = parseInt((document.getElementById("validityDays") || {}).value || "0", 10) || 0;
-      var hours = parseInt((document.getElementById("validityHours") || {}).value || "0", 10) || 0;
-      var minutes = parseInt((document.getElementById("validityMinutes") || {}).value || "0", 10) || 0;
-      if (days < 0 || hours < 0 || minutes < 0) { showToast("Values cannot be negative", "error"); return; }
-      if (days + hours + minutes <= 0) { showToast("Enter days, hours, or minutes", "error"); return; }
+      var days = parseInt(document.getElementById("validityDays").value || "0", 10) || 0;
+      
+      if (days <= 0) { showToast("Enter days", "error"); return; }
+      
       var isReduce = sign < 0;
-      var label = [];
-      if (days) label.push(days + "d");
-      if (hours) label.push(hours + "h");
-      if (minutes) label.push(minutes + "m");
-      var labelStr = label.join(" ");
-      if (isReduce && !confirm("Reduce validity by " + labelStr + "?")) return;
-
-      var isTrialKey = !!(keyData && (keyData.keyType === "trial" || !keyData.expiresAt));
-      var body = {
-        days: days,
-        hours: hours,
-        minutes: minutes,
-        op: isReduce ? "reduce" : "extend",
-        keyType: isTrialKey ? "trial" : "regular"
-      };
-      if (!isTrialKey && keyData && keyData.expiresAt) {
-        var base = new Date(keyData.expiresAt).getTime();
-        var delta = (days * 86400000 + hours * 3600000 + minutes * 60000) * (isReduce ? -1 : 1);
-        body.expiresAt = new Date(base + delta).toISOString();
-      }
-
-      async function postAdjust(apiBase) {
-        var path = "/api/admin/keys/" + keyId + (isReduce ? "/reduce" : "/extend");
-        var headers = { "Content-Type": "application/json" };
-        var token = getToken();
-        if (token) headers.Authorization = "Bearer " + token;
-        var res = await fetch((apiBase || getApiBase()).replace(/\/$/, "") + path, {
-          method: "POST",
-          headers: headers,
-          body: JSON.stringify(body),
-          cache: "no-store"
-        });
-        var data = {};
-        try { data = await res.json(); } catch (e) {}
-        if (!res.ok || data.ok === false) {
-          throw new Error(data.error || ("HTTP " + res.status));
-        }
-        return data;
-      }
-
+      var label = days + "d";
+      
+      if (isReduce && !confirm("Reduce validity by " + label + "?")) return;
+      
       try {
-        var res = await postAdjust(getApiBase());
-        var extra = (res && res.keyType === "trial") ? (" · " + (res.devicesUpdated || 0) + " device(s)") : "";
-        showToast((isReduce ? "Reduced −" : "Extended +") + labelStr + extra, "success");
+        var endpoint = isReduce ? "/reduce" : "/extend";
+        await api("/keys/" + keyId + endpoint, { 
+          method: "POST", 
+          body: { days: days } 
+        });
+        
+        showToast((isReduce ? "Reduced −" : "Extended +") + label, "success");
         loadKey();
       } catch (e) {
-        var msg = (e && e.message) || "Failed";
-        // Workers may be stale — retry Render backup for trial adjust
-        var backup = (window.DFOX_BACKUP_API || "https://fox-store-api.onrender.com").replace(/\/$/, "");
-        var primary = getApiBase().replace(/\/$/, "");
-        if (backup && backup !== primary && /not found/i.test(msg)) {
-          try {
-            var res2 = await postAdjust(backup);
-            var extra2 = (res2 && res2.keyType === "trial") ? (" · " + (res2.devicesUpdated || 0) + " device(s)") : "";
-            showToast((isReduce ? "Reduced −" : "Extended +") + labelStr + extra2 + " (backup API)", "success");
-            loadKey();
-            return;
-          } catch (e2) {
-            showToast(e2.message || msg, "error");
-            return;
-          }
-        }
-        showToast(msg, "error");
+        showToast(e.message, "error");
       }
     }
 
     async function pauseKey() {
-      var reason = prompt("Pause reason?"); if (reason === null) return;
+      if (!confirm("Pause this key?")) return;
       try {
-        await api("/keys/" + keyId + "/pause", { method: "POST", body: { reason: reason || "Paused" } });
-        showToast("Paused"); loadKey();
+        await api("/keys/" + keyId + "/pause", { method: "POST" });
+        showToast("Paused"); 
+        loadKey();
       } catch (e) { showToast(e.message, "error"); }
     }
+    
     async function resumeKey() {
-      try { await api("/keys/" + keyId + "/resume", { method: "POST" }); showToast("Resumed"); loadKey(); }
+      try { 
+        await api("/keys/" + keyId + "/resume", { method: "POST" }); 
+        showToast("Resumed"); 
+        loadKey(); 
+      }
       catch (e) { showToast(e.message, "error"); }
     }
+    
     async function banKey() {
-      var reason = prompt("Ban reason?"); if (reason === null) return;
+      if (!confirm("Ban this key?")) return;
       try {
-        await api("/keys/" + keyId + "/ban", { method: "POST", body: { reason: reason || "Banned" } });
-        showToast("Banned"); loadKey();
+        await api("/keys/" + keyId + "/ban", { method: "POST" });
+        showToast("Banned"); 
+        loadKey();
       } catch (e) { showToast(e.message, "error"); }
     }
+    
     async function unbanKey() {
-      try { await api("/keys/" + keyId + "/unban", { method: "POST" }); showToast("Unbanned"); loadKey(); }
+      try { 
+        await api("/keys/" + keyId + "/unban", { method: "POST" }); 
+        showToast("Unbanned"); 
+        loadKey(); 
+      }
       catch (e) { showToast(e.message, "error"); }
     }
+    
     async function hwidReset() {
       if (!confirm("Reset all device bindings?")) return;
-      try { await api("/keys/" + keyId + "/hwid-reset", { method: "POST" }); showToast("HWID reset"); loadKey(); }
+      try { 
+        await api("/keys/" + keyId + "/hwid-reset", { method: "POST" }); 
+        showToast("HWID reset"); 
+        loadKey(); 
+      }
       catch (e) { showToast(e.message, "error"); }
     }
-    async function hardDeleteKey() {
+    
+    async function deleteKey() {
       if (!confirm("Permanently delete this key? This cannot be undone.")) return;
       try {
-        await api("/keys/" + keyId + "/soft-delete", { method: "POST" });
-        showToast("Key permanently deleted");
+        await api("/keys/" + keyId + "/delete", { method: "DELETE" });
+        showToast("Key deleted");
         setTimeout(function () { window.location.href = "keys.html"; }, 600);
-      } catch (e) { showToast(e.message, "error"); }
-    }
-    async function unbindDevice(deviceId) {
-      if (!confirm("Unbind this device?")) return;
-      try {
-        await api("/keys/" + keyId + "/unbind", { method: "POST", body: { deviceId: deviceId } });
-        showToast("Unbound"); loadKey();
-      } catch (e) { showToast(e.message, "error"); }
-    }
-    async function banDevice(deviceId) {
-      if (typeof isRuler === "function" && !isRuler()) { showToast("Ruler only", "error"); return; }
-      var reason = prompt("Ban reason for this device?");
-      if (reason === null) return;
-      try {
-        await api("/keys/" + keyId + "/ban-device", { method: "POST", body: { deviceId: deviceId, reason: reason || "Banned" } });
-        showToast("Device banned");
-        loadKey();
-      } catch (e) { showToast(e.message, "error"); }
-    }
-    async function unbanDevice(deviceId) {
-      if (typeof isRuler === "function" && !isRuler()) { showToast("Ruler only", "error"); return; }
-      try {
-        await api("/keys/" + keyId + "/unban-device", { method: "POST", body: { deviceId: deviceId } });
-        showToast("Device unbanned");
-        loadKey();
       } catch (e) { showToast(e.message, "error"); }
     }
   </script>
