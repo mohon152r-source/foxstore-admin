@@ -9,59 +9,8 @@
   style-src 'self' 'unsafe-inline';
   img-src 'self' https: data:;
   connect-src 'self' https: http://localhost:* http://127.0.0.1:*;
-">
-  <title>Wallets — Fox Store</title>
+">  <title>Wallets — Fox Store</title>
   <link rel="stylesheet" href="css/style.css">
-  <style>
-    .wallet-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 12px;
-    }
-    .wallet-balance {
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--success);
-    }
-    .table-wrap {
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    th {
-      text-align: left;
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 11px;
-      text-transform: uppercase;
-      font-weight: 650;
-    }
-    td {
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--border);
-    }
-    tr:last-child td {
-      border-bottom: none;
-    }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-    .badge-credit { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
-    .badge-debit { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-    .badge-recharge { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
-    .badge-purchase { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
-  </style>
 </head>
 <body>
   <div id="app" class="layout"></div>
@@ -69,181 +18,69 @@
   <script src="js/app.js"></script>
   <script>
     requireAuth();
-    document.addEventListener("auth-ready", function () {
+    document.addEventListener("auth-ready", async () => {
       var user = window.__user;
-      
-      if (user && user.role === "reseller") {
+      if (user.role === "reseller") {
         loadMyWallet();
-      } else if (user && (user.role === "ruler" || user.role === "superadmin")) {
-        loadAllWallets();
       } else {
-        mountShell("Wallets");
-        document.getElementById("page-content").innerHTML = 
-          '<div class="alert alert-error">Unauthorized access</div>';
+        loadAllWallets();
       }
     });
 
-    function getTransactionBadge(type) {
-      type = String(type || "").toLowerCase();
-      if (type === "recharge") return "badge-recharge";
-      if (type === "purchase") return "badge-purchase";
-      if (type === "credit" || type === "refund") return "badge-credit";
-      if (type === "debit" || type === "deduct") return "badge-debit";
-      return "badge";
-    }
-
     async function loadAllWallets() {
-      mountShell("Wallets");
-      var root = document.getElementById("page-content");
-      root.innerHTML = 
-        '<div class="page-header">' +
-          '<div><h1>Wallets</h1><p>Manage reseller wallet balances</p></div>' +
-          '<button class="btn" type="button" onclick="loadAllWallets()">↻ Refresh</button>' +
-        '</div>' +
-        '<div id="content"><div class="empty"><span class="spinner"></span></div></div>';
-      
+      document.getElementById("app").innerHTML = renderNav("Wallets") + '<div class="page-header"><h1>Wallets</h1><p>Manage reseller wallet balances.</p></div><div id="content"><div class="empty"><span class="spinner"></span></div></div></main>';
       try {
         var res = await api("/wallets");
-        var wallets = res.data || [];
-        
-        var content = document.getElementById("content");
-        
-        if (wallets.length === 0) {
-          content.innerHTML = '<div class="empty">No wallets found.</div>';
-          return;
-        }
-        
-        content.innerHTML = 
-          '<div class="card">' +
-            '<div class="table-wrap">' +
-              '<table>' +
-                '<thead><tr>' +
-                  '<th>Reseller</th>' +
-                  '<th>Balance</th>' +
-                  '<th>Actions</th>' +
-                '</tr></thead>' +
-                '<tbody>' +
-                  wallets.map(function(w) {
-                    return '<tr>' +
-                      '<td><strong>' + esc(w.username || "—") + '</strong></td>' +
-                      '<td class="mono" style="color:var(--success);font-weight:600">' + 
-                        esc(formatMoney(w.balance || 0)) + 
-                      '</td>' +
-                      '<td>' +
-                        '<button class="btn btn-sm" type="button" onclick="rechargeWallet(\'' + esc(w.id) + '\',\'' + esc(w.username || "") + '\')">Recharge</button> ' +
-                        '<button class="btn btn-sm" type="button" onclick="viewWallet(\'' + esc(w.id) + '\')">View</button>' +
-                      '</td>' +
-                    '</tr>';
-                  }).join("") +
-                '</tbody>' +
-              '</table>' +
-            '</div>' +
-          '</div>';
-      } catch (e) {
-        var content = document.getElementById("content");
-        if (content) content.innerHTML = '<div class="alert alert-error">' + esc(e.message) + '</div>';
+        var wallets = res.data;
+        document.getElementById("content").innerHTML = wallets.length === 0
+          ? '<div class="card"><div class="card-body empty">No wallets yet.</div></div>'
+          : '<div class="card"><div class="table-wrap"><table><thead><tr><th>Reseller</th><th>Balance</th><th>Currency</th><th>Actions</th></tr></thead><tbody>' +
+            wallets.map(function(w) {
+              return '<tr><td>' + esc(w.username) + '</td><td class="mono" style="color:var(--success)">' + esc(formatMoney(w.balance)) + '</td><td>' + esc(w.currency) + '</td><td><button class="btn btn-sm" onclick="rechargeWallet(\'' + esc(w.id) + '\',\'' + esc(w.username) + '\')">Recharge</button> <button class="btn btn-sm" onclick="viewWallet(\'' + esc(w.id) + '\')">View</button></td></tr>';
+            }).join("") + '</tbody></table></div></div>';
+      } catch(e) {
+        document.getElementById("content").innerHTML = '<div class="alert alert-error">' + esc(e.message) + '</div>';
       }
     }
 
     async function loadMyWallet() {
-      mountShell("Wallets");
-      var root = document.getElementById("page-content");
-      root.innerHTML = 
-        '<div class="page-header"><h1>My Wallet</h1></div>' +
-        '<div id="content"><div class="empty"><span class="spinner"></span></div></div>';
-      
+      document.getElementById("app").innerHTML = renderNav("Wallets") + '<main class="main"><div class="page-header"><h1>My Wallet</h1></div><div id="content"><div class="empty"><span class="spinner"></span></div></div></main>';
       try {
         var res = await api("/wallets/me");
-        var w = res.data || {};
-        var transactions = w.transactions || [];
-        
-        var content = document.getElementById("content");
-        
-        content.innerHTML =
-          '<div class="wallet-card">' +
-            '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Available Balance</div>' +
-            '<div class="wallet-balance">' + esc(formatMoney(w.balance || 0)) + '</div>' +
-          '</div>' +
-          
-          '<div class="card">' +
-            '<div class="card-header"><h2>Transaction History</h2></div>' +
-            '<div class="table-wrap">' +
-              (transactions.length === 0 
-                ? '<div class="empty" style="padding:20px">No transactions yet.</div>'
-                : '<table>' +
-                    '<thead><tr>' +
-                      '<th>Type</th>' +
-                      '<th>Amount</th>' +
-                      '<th>Description</th>' +
-                      '<th>Date</th>' +
-                    '</tr></thead>' +
-                    '<tbody>' +
-                      transactions.map(function(t) {
-                        var isPositive = (t.amount || 0) >= 0;
-                        var color = isPositive ? "var(--success)" : "var(--danger)";
-                        var badgeClass = getTransactionBadge(t.type);
-                        
-                        return '<tr>' +
-                          '<td><span class="badge ' + badgeClass + '">' + esc(t.type || "—") + '</span></td>' +
-                          '<td class="mono" style="color:' + color + ';font-weight:600">' + 
-                            (isPositive ? "+" : "") + esc(formatMoney(t.amount || 0)) + 
-                          '</td>' +
-                          '<td>' + esc(t.description || "—") + '</td>' +
-                          '<td style="color:var(--muted);font-size:12px">' + esc(formatDate(t.createdAt)) + '</td>' +
-                        '</tr>';
-                      }).join("") +
-                    '</tbody>' +
-                  '</table>') +
-            '</div>' +
-          '</div>';
-      } catch (e) {
-        var content = document.getElementById("content");
-        if (content) content.innerHTML = '<div class="alert alert-error">' + esc(e.message) + '</div>';
+        var w = res.data;
+        document.getElementById("content").innerHTML =
+          '<div class="stats-grid"><div class="stat-card"><div class="label">Balance</div><div class="value" style="color:var(--success)">' + esc(formatMoney(w.balance)) + ' ' + esc(w.currency) + '</div></div></div>' +
+          '<div class="card"><div class="card-header"><h2>Transaction History</h2></div><div class="table-wrap">' +
+          (w.transactions.length === 0 ? '<div class="empty">No transactions yet.</div>' :
+          '<table><thead><tr><th>Type</th><th>Amount</th><th>Before</th><th>After</th><th>Description</th><th>Date</th></tr></thead><tbody>' +
+          w.transactions.map(function(t) {
+            var color = t.amount >= 0 ? "var(--success)" : "var(--danger)";
+            return '<tr><td><span class="badge">' + esc(t.type) + '</span></td><td class="mono" style="color:' + color + '">' + esc(formatMoney(t.amount)) + '</td><td class="mono">' + esc(formatMoney(t.balanceBefore)) + '</td><td class="mono">' + esc(formatMoney(t.balanceAfter)) + '</td><td>' + esc(t.description || "—") + '</td><td style="color:var(--muted);font-size:12px">' + esc(formatDate(t.createdAt)) + '</td></tr>';
+          }).join("") + '</tbody></table>') + '</div></div>';
+      } catch(e) {
+        document.getElementById("content").innerHTML = '<div class="alert alert-error">' + esc(e.message) + '</div>';
       }
     }
 
     async function rechargeWallet(walletId, username) {
-      var amount = prompt("Recharge amount for " + username + " (BDT):");
-      if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
-        showToast("Invalid amount", "error");
-        return;
-      }
-      
+      var amount = prompt("Recharge amount for " + username + ":");
+      if (!amount) return;
+      var desc = prompt("Description (optional):") || "Recharge";
       try {
-        await api("/wallets/" + walletId + "/recharge", { 
-          method: "POST", 
-          body: { 
-            amount: parseFloat(amount),
-            description: "Manual recharge"
-          } 
-        });
-        showToast("Recharged " + amount + " BDT to " + username);
+        await api("/wallets/" + walletId + "/recharge", { method: "POST", body: { amount: parseFloat(amount), description: desc } });
+        showToast("Recharged " + amount + " BDT");
         loadAllWallets();
-      } catch (e) { 
-        showToast(e.message || "Failed to recharge", "error"); 
-      }
+      } catch(e) { showToast(e.message, "error"); }
     }
 
     async function viewWallet(walletId) {
       try {
         var res = await api("/wallets/" + walletId);
-        var w = res.data || {};
-        
-        var transactions = w.transactions || [];
-        var txDetails = transactions.slice(0, 5).map(function(t) {
-          return "• " + t.type + ": " + formatMoney(t.amount) + " (" + formatDate(t.createdAt) + ")";
-        }).join("\n");
-        
-        alert(
-          "Wallet: " + (w.username || "Unknown") + "\n" +
-          "Balance: " + formatMoney(w.balance || 0) + "\n" +
-          "Transactions: " + transactions.length + "\n\n" +
-          "Recent:\n" + (txDetails || "No transactions")
-        );
-      } catch (e) { 
-        showToast(e.message || "Failed to load wallet", "error"); 
-      }
+        var w = res.data;
+        alert("Wallet: " + w.username + "\nBalance: " + formatMoney(w.balance) + " " + w.currency + "\n\nTransactions: " + w.transactions.length);
+      } catch(e) { showToast(e.message, "error"); }
     }
   </script>
 </body>
 </html>
+
