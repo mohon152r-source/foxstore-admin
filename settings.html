@@ -120,7 +120,7 @@
       border-color: var(--primary);
       box-shadow: 0 0 0 3px var(--primary-soft);
     }
-    .me-hint { font-size: 11px; color: var(--muted-2); margin-top: 5px; line-height: 1.4; }
+    .me-hint { font-size: 11px; color: var(--muted); margin-top: 5px; line-height: 1.4; }
 
     .me-actions {
       display: flex; flex-wrap: wrap; gap: 8px;
@@ -135,7 +135,7 @@
       background: var(--bg);
     }
     .tg-code {
-      font-family: var(--mono);
+      font-family: var(--mono, monospace);
       font-size: 16px; font-weight: 700;
       letter-spacing: 0.06em;
       color: #c4b5fd;
@@ -176,6 +176,8 @@
     .page-header.me-header { margin-bottom: 12px; }
     .page-header.me-header h1 { font-size: 20px; letter-spacing: -0.02em; }
     .page-header.me-header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -218,7 +220,6 @@
 
             '<div class="me-stack">' +
 
-              /* Profile */
               '<section class="me-section">' +
                 '<div class="me-section-head"><h2>Profile</h2></div>' +
                 '<div class="me-section-body">' +
@@ -241,7 +242,6 @@
                 '</div>' +
               '</section>' +
 
-              /* Telegram */
               '<section class="me-section">' +
                 '<div class="me-section-head">' +
                   '<h2>Telegram</h2>' +
@@ -259,9 +259,6 @@
                       ? '<button type="button" class="btn" id="tgUnlinkBtn">Unlink</button>'
                       : "") +
                   '</div>' +
-                  (!tgLinked || isRulerUser
-                    ? ""
-                    : '<div class="me-hint" style="margin-top:8px">Permanent link. Only Ruler can change.</div>') +
                   '<div class="tg-box" id="tgLinkBox" style="display:none">' +
                     '<div class="me-hint" style="margin-bottom:6px">Send in Telegram (10 min)</div>' +
                     '<div class="tg-code" id="tgCode"></div>' +
@@ -299,7 +296,6 @@
         }
 
         html +=
-              /* Password */
               '<section class="me-section">' +
                 '<div class="me-section-head"><h2>Security</h2></div>' +
                 '<div class="me-section-body">' +
@@ -314,21 +310,20 @@
                         '<input type="password" id="confirm" required minlength="4" autocomplete="new-password"></div>' +
                     '</div>' +
                     '<div class="me-actions">' +
-                      '<button type="submit" class="btn btn-primary" id="submitBtn">Change password</button>' +
+                      '<button type="submit" class="btn btn-primary" id="pwSubmitBtn">Change password</button>' +
                     '</div>' +
                   '</form>' +
                 '</div>' +
               '</section>' +
 
-              /* Logout */
               '<section class="me-section me-danger">' +
                 '<div class="me-section-body" style="padding:14px">' +
                   '<button type="button" class="btn btn-danger btn-block" id="logoutBtn">Logout</button>' +
                 '</div>' +
               '</section>' +
 
-            '</div>' + /* stack */
-          '</div>'; /* page */
+            '</div>' +
+          '</div>';
 
         root.innerHTML = html;
         if (typeof bindPasswordToggles === "function") bindPasswordToggles(root);
@@ -338,7 +333,6 @@
         var curEl = document.getElementById("currencyPref");
         if (curEl) curEl.value = String(cur).toUpperCase() === "CREDIT" ? "CREDIT" : "BDT";
 
-        // Refresh telegram from /auth/me
         api("/auth/me").then(function (me) {
           if (me.telegram) window.__telegram = me.telegram;
           if (me.user) {
@@ -388,7 +382,7 @@
               window.__wallet.currency = curPref;
             }
             showToast("Profile saved");
-            location.reload();
+            setTimeout(function () { location.reload(); }, 500);
           } catch (err) {
             showToast(err.message || "Save failed", "error");
             btn.disabled = false;
@@ -427,7 +421,7 @@
             try {
               await api("/auth/telegram/unlink", { method: "POST", body: {} });
               showToast("Telegram unlinked");
-              location.reload();
+              setTimeout(function () { location.reload(); }, 500);
             } catch (err) {
               showToast(err.message || "Failed", "error");
             }
@@ -464,7 +458,7 @@
               });
               window.__brand = { name: name, logoUrl: logo };
               showToast("Branding saved");
-              location.reload();
+              setTimeout(function () { location.reload(); }, 500);
             } catch (err) {
               showToast(err.message || "Save failed", "error");
               btn.disabled = false;
@@ -475,10 +469,10 @@
 
         document.getElementById("pwForm").addEventListener("submit", async function (e) {
           e.preventDefault();
-          var btn = document.getElementById("submitBtn");
+          var btn = document.getElementById("pwSubmitBtn");
           var next = document.getElementById("next").value;
-          var confirm = document.getElementById("confirm").value;
-          if (next !== confirm) { showToast("Passwords don't match", "error"); return; }
+          var confirmPw = document.getElementById("confirm").value;
+          if (next !== confirmPw) { showToast("Passwords don't match", "error"); return; }
           if (next.length < 4) { showToast("Password too short", "error"); return; }
           btn.disabled = true;
           btn.innerHTML = '<span class="spinner"></span> Changing…';
@@ -512,4 +506,3 @@
   </script>
 </body>
 </html>
-
