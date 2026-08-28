@@ -64,6 +64,8 @@
       background: var(--bg); border: 1px solid var(--border);
       border-radius: var(--radius-sm); padding: 14px; margin-bottom: 14px;
     }
+    .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .form-group { flex: 1; min-width: 150px; }
   </style>
 </head>
 <body>
@@ -152,7 +154,7 @@
 
         var listHtml = !pkgsCache.length
           ? '<div class="empty" style="padding:24px">No packages for this app.</div>'
-          : '<div class="pkg-list">' + pkgsCache.map(function (p, idx) {
+          : '<div class="pkg-list">' + pkgsCache.map(function (p) {
               return (
                 '<div class="pkg-item' + (p.isActive === false ? " is-off" : "") + '">' +
                   '<div style="min-width:0;flex:1">' +
@@ -193,7 +195,7 @@
       if (!selectedModId) return;
       document.getElementById("formContainer").innerHTML =
         '<div class="edit-form">' +
-          "<h3 style=\"margin:0 0 12px;font-size:14px\">Add package</h3>" +
+          '<h3 style="margin:0 0 12px;font-size:14px">Add package</h3>' +
           '<form id="createForm">' +
             '<div class="form-row">' +
               '<div class="form-group"><label>Name</label><input type="text" id="pkgName" placeholder="e.g. 30 Days" required></div>' +
@@ -229,7 +231,7 @@
       if (!p) return;
       document.getElementById("formContainer").innerHTML =
         '<div class="edit-form">' +
-          "<h3 style=\"margin:0 0 12px;font-size:14px\">Edit package</h3>" +
+          '<h3 style="margin:0 0 12px;font-size:14px">Edit package</h3>' +
           '<form id="editForm">' +
             '<div class="form-row">' +
               '<div class="form-group"><label>Name</label><input type="text" id="editName" value="' + esc(p.name || "") + '" required></div>' +
@@ -315,4 +317,3 @@
   </script>
 </body>
 </html>
-
