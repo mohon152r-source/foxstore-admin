@@ -20,6 +20,7 @@
       background: linear-gradient(160deg, rgba(99,102,241,0.08), var(--card) 45%);
       padding: 14px;
       transition: border-color 0.15s, transform 0.12s;
+      cursor: pointer;
     }
     .app-card:hover { border-color: var(--primary); transform: translateY(-1px); }
     .app-id-chip {
@@ -28,12 +29,28 @@
       background: rgba(0,0,0,0.25); border: 1px solid var(--border);
       font-family: ui-monospace, monospace; font-size: 11px; color: #93c5fd;
       max-width: 100%; word-break: break-all;
+      cursor: pointer;
     }
     .app-id-chip button {
       border: none; background: transparent; color: var(--muted);
       cursor: pointer; font-size: 12px; padding: 0 2px;
     }
     .app-card-actions { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .detail-panel { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+    .detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+    .detail-title { font-size: 18px; margin: 0; }
+    .detail-sub { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+    .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .detail-desc { font-size: 13px; color: var(--muted); margin: 12px 0; }
+    .detail-section { font-size: 13px; font-weight: 600; margin: 16px 0 8px; }
+    .price-list { display: flex; flex-direction: column; gap: 8px; }
+    .price-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
+    .price-info { flex: 1; }
+    .price-name { font-size: 13px; font-weight: 600; }
+    .price-dur { font-size: 11px; color: var(--muted); }
+    .price-buy { display: flex; align-items: center; gap: 8px; }
+    .price-amt { font-size: 14px; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -56,7 +73,7 @@
             : '') +
         '</div>' +
         '<div id="formContainer"></div>' +
-        '<div id="detailPanel"></div>' +
+        '<div id="detailPanel" hidden></div>' +
         '<div id="content" class="app-grid"><div class="empty"><span class="spinner"></span></div></div>';
       loadMods();
     });
@@ -110,14 +127,14 @@
               '<div style="display:flex;gap:12px;align-items:center">' +
                 logo +
                 '<div style="flex:1;min-width:0">' +
-                  "<div style=\"display:flex;align-items:center;justify-content:space-between;gap:8px\">" +
-                    "<strong style=\"font-size:15px\">" + esc(m.displayName || m.name) + "</strong>" +
-                    '<span class="badge ' + (m.isActive ? "badge-active" : "badge-deleted") + '">' + (m.isActive ? "active" : "off") + "</span>" +
-                  "</div>" +
+                  '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">' +
+                    '<strong style="font-size:15px">' + esc(m.displayName || m.name) + '</strong>' +
+                    '<span class="badge ' + (m.isActive ? "badge-active" : "badge-deleted") + '">' + (m.isActive ? "active" : "off") + '</span>' +
+                  '</div>' +
                   '<div style="font-size:12px;color:var(--muted);margin-top:4px">' +
-                    '<span class="mono">' + esc(m.name) + "</span> · v" + esc(m.version || "1.0.0") +
-                    ' · <span style="color:#38bdf8">' + esc(String(m.keyCount || 0)) + "</span>" +
-                  "</div>" +
+                    '<span class="mono">' + esc(m.name) + '</span> · v' + esc(m.version || "1.0.0") +
+                    ' · <span style="color:#38bdf8">' + esc(String(m.keyCount || 0)) + ' keys</span>' +
+                  '</div>' +
                   (isRuler()
                     ? (function () {
                         var id = String(m.id || "");
@@ -125,68 +142,68 @@
                         return '<div class="app-id-chip" onclick="event.stopPropagation();copyToClipboard(\'' + esc(id) + '\')" title="Click to copy full ID">' +
                           '<span style="color:var(--muted)">ID</span> <span class="mono">' + esc(short) + '</span></div>';
                       })()
-                    : "") +
-                "</div>" +
-              "</div>" +
+                    : '') +
+                '</div>' +
+              '</div>' +
               controls +
-            "</div>"
+            '</div>'
           );
         }).join("");
       } catch (e) {
-        box.innerHTML = '<div class="empty" style="color:var(--danger)">' + esc(e.message) + "</div>";
+        box.innerHTML = '<div class="empty" style="color:var(--danger)">' + esc(e.message) + '</div>';
       }
     }
 
     async function openAppDetail(id) {
       var panel = document.getElementById("detailPanel");
       var grid = document.getElementById("content");
-      if (grid) grid.hidden = true;
+      if (grid) grid.style.display = "none";
       panel.hidden = false;
       panel.innerHTML = '<div class="detail-panel"><div class="empty"><span class="spinner"></span></div></div>';
       window.scrollTo({ top: 0, behavior: "smooth" });
       try {
-        var modRes = await api("/mods/" + id);
+        var modRes = await api("/mods/" + encodeURIComponent(id));
         var m = modRes.data;
         var pkgRes = await api("/packages?modId=" + encodeURIComponent(id));
         var pkgs = pkgRes.data || [];
 
         var pkgHtml = !pkgs.length
           ? '<div class="empty" style="padding:16px 0">No pricing yet.' +
-              (isRuler() ? ' <a href="packages.html">Add pricing →</a>' : "") +
-            "</div>"
+              (isRuler() ? ' <a href="packages.html">Add pricing →</a>' : '') +
+            '</div>'
           : '<div class="price-list">' + pkgs.map(function (p) {
               return (
                 '<div class="price-row">' +
                   '<div class="price-info">' +
-                    '<div class="price-name">' + esc(p.name || p.duration || "Package") + "</div>" +
-                    '<div class="price-dur">' + esc(p.duration || "") + "</div>" +
-                  "</div>" +
+                    '<div class="price-name">' + esc(p.name || p.duration || "Package") + '</div>' +
+                    '<div class="price-dur">' + esc(p.duration || "") + '</div>' +
+                  '</div>' +
                   '<div class="price-buy">' +
                     '<span class="price-amt">' + formatPriceHtml(p.price) + '</span>' +
                     '<a class="btn btn-sm btn-primary" href="new-key.html?modId=' + encodeURIComponent(id) +
-                      "&packageId=" + encodeURIComponent(p.id) + '">Purchase</a>' +
-                  "</div>" +
-                "</div>"
+                      '&packageId=' + encodeURIComponent(p.id) + '">Purchase</a>' +
+                  '</div>' +
+                '</div>'
               );
-            }).join("") + "</div>";
+            }).join('') + '</div>';
 
         panel.innerHTML =
           '<div class="detail-panel">' +
             '<div class="detail-head">' +
-              "<div>" +
-                '<h2 class="detail-title">' + esc(m.displayName || m.name) + "</h2>" +
-                '<p class="detail-sub">' + esc(m.name) + " · v" + esc(m.version || "1.0.0") + "</p>" +
-              "</div>" +
+              '<div>' +
+                '<h2 class="detail-title">' + esc(m.displayName || m.name) + '</h2>' +
+                '<p class="detail-sub">' + esc(m.name) + ' · v' + esc(m.version || "1.0.0") + '</p>' +
+              '</div>' +
               '<div class="detail-actions">' +
                 '<a class="btn btn-sm btn-primary" href="new-key.html?modId=' + encodeURIComponent(id) + '">+ Purchase</a>' +
-                (isRuler() ? '<a class="btn btn-sm" href="packages.html?modId=' + encodeURIComponent(id) + '">Edit Pricing</a>' : "") +
+                (isRuler() ? '<a class="btn btn-sm" href="packages.html?modId=' + encodeURIComponent(id) + '">Edit Pricing</a>' : '') +
                 '<button class="btn btn-sm" type="button" onclick="closeAppDetail()">Close</button>' +
-              "</div>" +
-            "</div>" +
-            (m.description ? '<p class="detail-desc">' + esc(m.description) + "</p>" : "") +
+              '</div>' +
+            '</div>' +
+            (m.description ? '<p class="detail-desc">' + esc(m.description) + '</p>' : '') +
             '<h3 class="detail-section">Pricing</h3>' +
             pkgHtml +
-          "</div>";
+          '</div>';
       } catch (e) {
         panel.innerHTML =
           '<div class="detail-panel"><p style="color:var(--danger)">' + esc(e.message) +
@@ -197,8 +214,8 @@
     function closeAppDetail() {
       var panel = document.getElementById("detailPanel");
       var grid = document.getElementById("content");
-      if (panel) { panel.innerHTML = ""; panel.hidden = true; }
-      if (grid) grid.hidden = false;
+      if (panel) { panel.innerHTML = ''; panel.hidden = true; }
+      if (grid) grid.style.display = '';
     }
 
     function showCreateForm() {
@@ -257,23 +274,23 @@
     async function editMod(id) {
       if (!isRuler()) return;
       try {
-        var res = await api("/mods/" + id);
+        var res = await api("/mods/" + encodeURIComponent(id));
         var m = res.data;
         document.getElementById("formContainer").innerHTML =
-          '<div class="card"><div class="card-header"><h2>Edit: ' + esc(m.displayName || m.name) + "</h2></div><div class=\"card-body\">" +
+          '<div class="card"><div class="card-header"><h2>Edit: ' + esc(m.displayName || m.name) + '</h2></div><div class="card-body">' +
           '<form id="editModForm">' +
             '<div class="form-group"><label>App Name</label><input type="text" id="editDisplayName" value="' + esc(m.displayName || m.name) + '"></div>' +
-            '<div class="form-group"><label>Logo URL</label><input type="url" id="editLogo" value="' + esc(m.logoUrl || "") + '"></div>' +
+            '<div class="form-group"><label>Logo URL</label><input type="url" id="editLogo" value="' + esc(m.logoUrl || '') + '"></div>' +
             '<div class="form-group"><label>Version</label><input type="text" id="editVersion" value="' + esc(m.version || "1.0.0") + '"></div>' +
-            '<div class="form-group"><label>Description</label><textarea id="editDescription" rows="2">' + esc(m.description || "") + "</textarea></div>" +
-            '<div class="form-group"><label><input type="checkbox" id="editIsActive" style="width:auto;margin-right:6px" ' + (m.isActive ? "checked" : "") + ">Enabled</label></div>" +
+            '<div class="form-group"><label>Description</label><textarea id="editDescription" rows="2">' + esc(m.description || '') + '</textarea></div>' +
+            '<div class="form-group"><label><input type="checkbox" id="editIsActive" style="width:auto;margin-right:6px" ' + (m.isActive ? "checked" : "") + '>Enabled</label></div>' +
             '<button type="submit" class="btn btn-primary">Save</button> ' +
             '<button type="button" class="btn" onclick="document.getElementById(\'formContainer\').innerHTML=\'\'">Cancel</button>' +
-          "</form></div></div>";
+          '</form></div></div>';
         document.getElementById("editModForm").addEventListener("submit", async function (e) {
           e.preventDefault();
           try {
-            await api("/mods/" + id, {
+            await api("/mods/" + encodeURIComponent(id), {
               method: "PATCH",
               body: {
                 displayName: document.getElementById("editDisplayName").value.trim(),
@@ -295,7 +312,7 @@
     async function toggleModActive(id, active) {
       if (!isRuler()) return;
       try {
-        await api("/mods/" + id, { method: "PATCH", body: { isActive: active } });
+        await api("/mods/" + encodeURIComponent(id), { method: "PATCH", body: { isActive: active } });
         showToast(active ? "Enabled" : "Disabled");
         loadMods();
       } catch (e) { showToast(e.message, "error"); }
@@ -303,11 +320,12 @@
 
     async function deleteMod(id, name) {
       if (!isRuler()) return;
-      if (!confirm("HARD DELETE app \"" + name + "\" and ALL its keys/packages permanently?")) return;
+      if (!confirm('HARD DELETE app "' + name + '" and ALL its keys/packages permanently?')) return;
       try {
-        await api("/mods/" + id + "?hard=1", { method: "DELETE" });
+        await api("/mods/" + encodeURIComponent(id) + "?hard=1", { method: "DELETE" });
         showToast("App hard deleted");
         document.getElementById("detailPanel").innerHTML = "";
+        closeAppDetail();
         loadMods();
       } catch (e) { showToast(e.message, "error"); }
     }
