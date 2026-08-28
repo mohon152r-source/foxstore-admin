@@ -36,6 +36,17 @@
     .status-dot.on { background:#34d399; box-shadow:0 0 8px #34d39988; }
     .status-dot.warn { background:#fbbf24; }
     .status-dot.off { background:#f87171; }
+    .log-card { border-left: 3px solid #94a3b8; padding: 10px; margin-bottom: 8px; background: var(--bg); border-radius: 8px; }
+    .log-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .log-action { font-weight: 600; font-size: 13px; }
+    .log-time { font-size: 11px; color: var(--muted); }
+    .log-who { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .log-kv { display: flex; gap: 8px; font-size: 12px; margin-top: 2px; }
+    .log-k { color: var(--muted); flex-shrink: 0; }
+    .log-v { word-break: break-all; }
+    .device-card { display: flex; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; align-items: flex-start; }
+    .device-card.is-banned { border-color: rgba(248,113,113,0.5); background: rgba(248,113,113,0.05); }
+    .validity-adjust { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; }
   </style>
 </head>
 <body>
@@ -127,7 +138,7 @@
           var canRed = hasPerm("key_reduce") || (typeof isManager === "function" && isManager());
           var inp = 'style="width:64px;padding:8px 8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--fg)"';
           actParts.push(
-            '<div class="validity-adjust" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%">' +
+            '<div class="validity-adjust">' +
               '<span style="font-size:12px;color:var(--muted);width:100%">Adjust validity</span>' +
               '<label style="font-size:11px;color:var(--muted)">D</label>' +
               '<input type="number" id="validityDays" value="0" min="0" max="3650" ' + inp + '>' +
@@ -155,9 +166,9 @@
           : k.devices.map(function (d) {
               var exp = d.expiresAt ? formatDate(d.expiresAt) : "—";
               var banned = d.isBanned === true || d.isBanned === "t" || d.isBanned === "true";
-              var actions = "";
+              var deviceActions = "";
               if (isRulerUser) {
-                actions =
+                deviceActions =
                   '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
                   (banned
                     ? '<button class="btn btn-sm" type="button" onclick="unbanDevice(\'' + esc(d.deviceId || "") + '\')">Unban</button>'
@@ -178,40 +189,40 @@
                     (isTrial ? ' · Exp: <span style="color:#c084fc">' + esc(exp) + "</span>" : "") +
                     (banned && d.banReason ? " · " + esc(d.banReason) : "") +
                   "</div></div>" +
-                actions +
+                deviceActions +
               "</div>";
             }).join("");
 
         root.innerHTML =
           '<div style="margin-bottom:12px"><a href="keys.html" style="font-size:13px;color:var(--muted)">← Back to keys</a></div>' +
 
-          '<div class="detail-panel" style="margin-bottom:14px">' +
-            '<div class="detail-head">' +
-              '<div style="min-width:0;flex:1">' +
-                '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">LICENSE KEY</div>' +
-                '<div class="key-code" style="font-size:18px;word-break:break-all">' + esc(k.key || "—") + '</div>' +
-                '<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">' +
-                  '<span class="badge" style="color:' + stColor + ';border-color:' + stColor + '55">' +
-                    '<span class="status-dot ' + statusDotClass(k.status) + '"></span>' + esc(k.status || "—") +
-                  '</span>' +
-                  (isTrial
-                    ? '<span class="badge badge-info">Trial · ' + esc(k.trialDuration || "") + '</span>'
-                    : '<span class="badge badge-info">Regular</span>') +
-                  '<span style="font-size:12px;color:var(--muted)">' + esc(k.modDisplayName || k.modName || "") + '</span>' +
+          '<div class="card" style="margin-bottom:14px">' +
+            '<div class="card-body">' +
+              '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">' +
+                '<div style="min-width:0;flex:1">' +
+                  '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">LICENSE KEY</div>' +
+                  '<div style="font-size:18px;word-break:break-all;font-weight:600">' + esc(k.key || "—") + '</div>' +
+                  '<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">' +
+                    '<span class="badge" style="color:' + stColor + ';border-color:' + stColor + '55">' +
+                      '<span class="status-dot ' + statusDotClass(k.status) + '"></span>' + esc(k.status || "—") +
+                    '</span>' +
+                    (isTrial
+                      ? '<span class="badge badge-info">Trial · ' + esc(k.trialDuration || "") + '</span>'
+                      : '<span class="badge badge-info">Regular</span>') +
+                    '<span style="font-size:12px;color:var(--muted)">' + esc(k.modDisplayName || k.modName || "") + '</span>' +
+                  '</div>' +
                 '</div>' +
+                '<button class="btn btn-sm btn-primary" type="button" onclick="copyKey()">Copy</button>' +
               '</div>' +
-              '<button class="btn btn-sm btn-primary" type="button" onclick="copyKey()">Copy</button>' +
-            '</div>' +
-            '<div class="snap-grid" style="margin-top:4px">' +
-              '<div class="snap-cell"><div class="k">Devices</div><div class="v" style="color:#38bdf8">' + esc(String(k.devices.length)) + ' / ' + esc(accessLabel) + '</div></div>' +
-              '<div class="snap-cell"><div class="k">' + (isTrial ? "Trial" : "Expires") + '</div><div class="v" style="color:' + (days === 0 ? "var(--danger)" : "var(--fg)") + '">' +
-                esc(isTrial ? (k.trialDuration || "on login") : (formatDate(k.expiresAt) || "—")) + '</div></div>' +
-              '<div class="snap-cell"><div class="k">Seller</div><div class="v">' + esc(k.sellerName || "—") + '</div></div>' +
-              '<div class="snap-cell"><div class="k">Created</div><div class="v" style="font-size:13px">' + esc(formatDate(k.createdAt)) + '</div></div>' +
+              '<div class="snap-grid" style="margin-top:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">' +
+                '<div class="snap-cell" style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px"><div class="k" style="font-size:10px;color:var(--muted);text-transform:uppercase">Devices</div><div class="v" style="font-size:18px;font-weight:700;color:#38bdf8;margin-top:2px">' + esc(String(k.devices.length)) + ' / ' + esc(accessLabel) + '</div></div>' +
+                '<div class="snap-cell" style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px"><div class="k" style="font-size:10px;color:var(--muted);text-transform:uppercase">' + (isTrial ? "Trial" : "Expires") + '</div><div class="v" style="font-size:16px;font-weight:700;color:' + (days === 0 ? "var(--danger)" : "var(--fg)") + ';margin-top:2px">' +
+                  esc(isTrial ? (k.trialDuration || "on login") : (formatDate(k.expiresAt) || "—")) + '</div></div>' +
+                '<div class="snap-cell" style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px"><div class="k" style="font-size:10px;color:var(--muted);text-transform:uppercase">Seller</div><div class="v" style="font-size:16px;font-weight:700;margin-top:2px">' + esc(k.sellerName || "—") + '</div></div>' +
+                '<div class="snap-cell" style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px"><div class="k" style="font-size:10px;color:var(--muted);text-transform:uppercase">Created</div><div class="v" style="font-size:13px;font-weight:700;margin-top:2px">' + esc(formatDate(k.createdAt)) + '</div></div>' +
+              '</div>' +
             '</div>' +
           '</div>' +
-
-          
 
           actions +
 
@@ -264,7 +275,7 @@
 
           '<div id="tab-logs" class="tab-content">' +
             '<div class="card"><div class="card-header"><h2>Key activity</h2></div>' +
-            '<div class="card-body"><div class="log-list" id="keyLogs"><div class="empty"><span class="spinner"></span></div></div></div></div>' +
+            '<div class="card-body"><div id="keyLogs"><div class="empty"><span class="spinner"></span></div></div></div></div>' +
           '</div>';
 
         loadKeyLogs();
@@ -275,6 +286,7 @@
 
     async function loadKeyLogs() {
       var el = document.getElementById("keyLogs");
+      if (!el) return;
       try {
         var res = await api("/keys/" + encodeURIComponent(keyId) + "/logs");
         var logs = res.data || [];
@@ -292,13 +304,13 @@
           }
           var rows = "";
           if (details && typeof details === "object" && !Array.isArray(details)) {
-            rows = Object.keys(details).map(function (k) {
-              var v = details[k];
+            rows = Object.keys(details).map(function (key) {
+              var v = details[key];
               if (v == null) v = "—";
               else if (typeof v === "object") {
                 try { v = JSON.stringify(v); } catch (e) { v = String(v); }
               }
-              return '<div class="log-kv"><span class="log-k">' + esc(k) + '</span><span class="log-v">' + esc(String(v)) + '</span></div>';
+              return '<div class="log-kv"><span class="log-k">' + esc(key) + '</span><span class="log-v">' + esc(String(v)) + '</span></div>';
             }).join("");
           } else if (details != null && details !== "") {
             rows = '<div class="log-kv"><span class="log-v">' + esc(String(details)) + '</span></div>';
@@ -310,13 +322,13 @@
           else if (/ban|delete|fail|error|revok/.test(a)) color = "#f87171";
           else if (/login|bind|device/.test(a)) color = "#60a5fa";
           return (
-            '<div class="log-card" style="border-left:3px solid ' + color + '">' +
+            '<div class="log-card" style="border-left-color:' + color + '">' +
               '<div class="log-card-top">' +
                 '<span class="log-action" style="color:' + color + '">' + esc(action) + '</span>' +
                 '<span class="log-time">' + esc(when) + '</span>' +
               '</div>' +
               (who ? '<div class="log-who">by ' + esc(String(who)) + '</div>' : '') +
-              (rows ? '<div class="log-body">' + rows + '</div>' : '') +
+              (rows ? '<div>' + rows + '</div>' : '') +
             '</div>'
           );
         }).join("");
@@ -356,82 +368,48 @@
         body.expiresAt = new Date(base + delta).toISOString();
       }
 
-      async function postAdjust(apiBase) {
-        var path = "/api/admin/keys/" + keyId + (isReduce ? "/reduce" : "/extend");
-        var headers = { "Content-Type": "application/json" };
-        var token = getToken();
-        if (token) headers.Authorization = "Bearer " + token;
-        var res = await fetch((apiBase || getApiBase()).replace(/\/$/, "") + path, {
-          method: "POST",
-          headers: headers,
-          body: JSON.stringify(body),
-          cache: "no-store"
-        });
-        var data = {};
-        try { data = await res.json(); } catch (e) {}
-        if (!res.ok || data.ok === false) {
-          throw new Error(data.error || ("HTTP " + res.status));
-        }
-        return data;
-      }
-
       try {
-        var res = await postAdjust(getApiBase());
+        var endpoint = isReduce ? "/reduce" : "/extend";
+        var res = await api("/keys/" + encodeURIComponent(keyId) + endpoint, { method: "POST", body: body });
         var extra = (res && res.keyType === "trial") ? (" · " + (res.devicesUpdated || 0) + " device(s)") : "";
         showToast((isReduce ? "Reduced −" : "Extended +") + labelStr + extra, "success");
         loadKey();
       } catch (e) {
-        var msg = (e && e.message) || "Failed";
-        // Workers may be stale — retry Render backup for trial adjust
-        var backup = (window.DFOX_BACKUP_API || "https://fox-store-api.onrender.com").replace(/\/$/, "");
-        var primary = getApiBase().replace(/\/$/, "");
-        if (backup && backup !== primary && /not found/i.test(msg)) {
-          try {
-            var res2 = await postAdjust(backup);
-            var extra2 = (res2 && res2.keyType === "trial") ? (" · " + (res2.devicesUpdated || 0) + " device(s)") : "";
-            showToast((isReduce ? "Reduced −" : "Extended +") + labelStr + extra2 + " (backup API)", "success");
-            loadKey();
-            return;
-          } catch (e2) {
-            showToast(e2.message || msg, "error");
-            return;
-          }
-        }
-        showToast(msg, "error");
+        showToast(e.message || "Failed", "error");
       }
     }
 
     async function pauseKey() {
       var reason = prompt("Pause reason?"); if (reason === null) return;
       try {
-        await api("/keys/" + keyId + "/pause", { method: "POST", body: { reason: reason || "Paused" } });
+        await api("/keys/" + encodeURIComponent(keyId) + "/pause", { method: "POST", body: { reason: reason || "Paused" } });
         showToast("Paused"); loadKey();
       } catch (e) { showToast(e.message, "error"); }
     }
     async function resumeKey() {
-      try { await api("/keys/" + keyId + "/resume", { method: "POST" }); showToast("Resumed"); loadKey(); }
+      try { await api("/keys/" + encodeURIComponent(keyId) + "/resume", { method: "POST" }); showToast("Resumed"); loadKey(); }
       catch (e) { showToast(e.message, "error"); }
     }
     async function banKey() {
       var reason = prompt("Ban reason?"); if (reason === null) return;
       try {
-        await api("/keys/" + keyId + "/ban", { method: "POST", body: { reason: reason || "Banned" } });
+        await api("/keys/" + encodeURIComponent(keyId) + "/ban", { method: "POST", body: { reason: reason || "Banned" } });
         showToast("Banned"); loadKey();
       } catch (e) { showToast(e.message, "error"); }
     }
     async function unbanKey() {
-      try { await api("/keys/" + keyId + "/unban", { method: "POST" }); showToast("Unbanned"); loadKey(); }
+      try { await api("/keys/" + encodeURIComponent(keyId) + "/unban", { method: "POST" }); showToast("Unbanned"); loadKey(); }
       catch (e) { showToast(e.message, "error"); }
     }
     async function hwidReset() {
       if (!confirm("Reset all device bindings?")) return;
-      try { await api("/keys/" + keyId + "/hwid-reset", { method: "POST" }); showToast("HWID reset"); loadKey(); }
+      try { await api("/keys/" + encodeURIComponent(keyId) + "/hwid-reset", { method: "POST" }); showToast("HWID reset"); loadKey(); }
       catch (e) { showToast(e.message, "error"); }
     }
     async function hardDeleteKey() {
       if (!confirm("Permanently delete this key? This cannot be undone.")) return;
       try {
-        await api("/keys/" + keyId + "/soft-delete", { method: "POST" });
+        await api("/keys/" + encodeURIComponent(keyId) + "/soft-delete", { method: "POST" });
         showToast("Key permanently deleted");
         setTimeout(function () { window.location.href = "keys.html"; }, 600);
       } catch (e) { showToast(e.message, "error"); }
@@ -439,7 +417,7 @@
     async function unbindDevice(deviceId) {
       if (!confirm("Unbind this device?")) return;
       try {
-        await api("/keys/" + keyId + "/unbind", { method: "POST", body: { deviceId: deviceId } });
+        await api("/keys/" + encodeURIComponent(keyId) + "/unbind", { method: "POST", body: { deviceId: deviceId } });
         showToast("Unbound"); loadKey();
       } catch (e) { showToast(e.message, "error"); }
     }
@@ -448,7 +426,7 @@
       var reason = prompt("Ban reason for this device?");
       if (reason === null) return;
       try {
-        await api("/keys/" + keyId + "/ban-device", { method: "POST", body: { deviceId: deviceId, reason: reason || "Banned" } });
+        await api("/keys/" + encodeURIComponent(keyId) + "/ban-device", { method: "POST", body: { deviceId: deviceId, reason: reason || "Banned" } });
         showToast("Device banned");
         loadKey();
       } catch (e) { showToast(e.message, "error"); }
@@ -456,7 +434,7 @@
     async function unbanDevice(deviceId) {
       if (typeof isRuler === "function" && !isRuler()) { showToast("Ruler only", "error"); return; }
       try {
-        await api("/keys/" + keyId + "/unban-device", { method: "POST", body: { deviceId: deviceId } });
+        await api("/keys/" + encodeURIComponent(keyId) + "/unban-device", { method: "POST", body: { deviceId: deviceId } });
         showToast("Device unbanned");
         loadKey();
       } catch (e) { showToast(e.message, "error"); }
@@ -464,4 +442,3 @@
   </script>
 </body>
 </html>
-
