@@ -24,7 +24,6 @@
 
     function deviceCount(k) {
       if (!k) return 0;
-      // TrialKey list API returns numeric deviceCount from TrialDeviceBinding
       if (typeof k.deviceCount === "number" && !isNaN(k.deviceCount)) return k.deviceCount;
       if (k.deviceCount != null && String(k.deviceCount).trim() !== "") {
         var n = parseInt(k.deviceCount, 10);
@@ -39,7 +38,6 @@
       return 0;
     }
 
-    /** Pretty trial duration: +3d / 30m / 12h → 3d / 30m / 12h */
     function formatTrialDuration(raw) {
       if (!raw) return "—";
       var s = String(raw).trim().replace(/^\+/, "");
@@ -205,7 +203,7 @@
         if (typeof isRuler === "function" && isRuler()) {
           if (state.keyType !== "all") params.set("keyType", state.keyType);
         } else {
-          params.set("keyType", "regular"); // sellers never see trial keys
+          params.set("keyType", "regular");
         }
         if (state.sellerId !== "all") params.set("sellerId", state.sellerId);
         var data = await api("/keys?" + params.toString());
@@ -256,22 +254,20 @@
         var sel = state.selected.has(k.id);
         var st = (k.status || "active").toLowerCase();
         var actions =
-          '<button class="btn btn-sm" type="button" onclick="copyToClipboard(\'' + esc(k.key) + '\')" title="Copy key">Copy</button>' +
+          '<button class="btn btn-sm" type="button" onclick="copyKey(\'' + esc(k.key) + '\')" title="Copy key">Copy</button>' +
           '<a class="btn btn-sm" href="key.html?id=' + encodeURIComponent(k.id) + '" title="Details">Details</a>';
-        if (true) {
-          if (st === "paused" && hasPerm("key_resume")) {
-            actions += '<button class="btn btn-sm" type="button" onclick="resumeKey(\'' + esc(k.id) + '\')">Resume</button>';
-          } else if (st !== "banned" && hasPerm("key_pause")) {
-            actions += '<button class="btn btn-sm" type="button" onclick="pauseKey(\'' + esc(k.id) + '\')">Pause</button>';
-          }
-          if (st === "banned" && hasPerm("key_unban")) {
-            actions += '<button class="btn btn-sm" type="button" onclick="unbanKey(\'' + esc(k.id) + '\')">Unban</button>';
-          } else if (st !== "banned" && hasPerm("key_ban")) {
-            actions += '<button class="btn btn-sm" type="button" onclick="banKey(\'' + esc(k.id) + '\')">Ban</button>';
-          }
-          if ((typeof isManager === "function" && isManager()) || (typeof hasPerm === "function" && hasPerm("key_delete"))) {
-            actions += '<button class="btn btn-sm btn-danger" type="button" onclick="deleteKey(\'' + esc(k.id) + '\')">Delete</button>';
-          }
+        if (st === "paused" && hasPerm("key_resume")) {
+          actions += '<button class="btn btn-sm" type="button" onclick="resumeKey(\'' + esc(k.id) + '\')">Resume</button>';
+        } else if (st !== "banned" && hasPerm("key_pause")) {
+          actions += '<button class="btn btn-sm" type="button" onclick="pauseKey(\'' + esc(k.id) + '\')">Pause</button>';
+        }
+        if (st === "banned" && hasPerm("key_unban")) {
+          actions += '<button class="btn btn-sm" type="button" onclick="unbanKey(\'' + esc(k.id) + '\')">Unban</button>';
+        } else if (st !== "banned" && hasPerm("key_ban")) {
+          actions += '<button class="btn btn-sm" type="button" onclick="banKey(\'' + esc(k.id) + '\')">Ban</button>';
+        }
+        if ((typeof isManager === "function" && isManager()) || (typeof hasPerm === "function" && hasPerm("key_delete"))) {
+          actions += '<button class="btn btn-sm btn-danger" type="button" onclick="deleteKey(\'' + esc(k.id) + '\')">Delete</button>';
         }
 
         return (
@@ -322,6 +318,10 @@
       }
     }
 
+    function copyKey(key) {
+      copyToClipboard(key);
+    }
+
     function toggleSelect(id, checked) {
       if (checked) state.selected.add(id); else state.selected.delete(id);
       renderTable();
@@ -331,25 +331,25 @@
 
     async function pauseKey(id) {
       var r = prompt("Pause reason?"); if (r === null) return;
-      try { await api("/keys/" + id + "/pause", { method: "POST", body: { reason: r || "Paused" } }); showToast("Paused"); loadKeys(); }
+      try { await api("/keys/" + encodeURIComponent(id) + "/pause", { method: "POST", body: { reason: r || "Paused" } }); showToast("Paused"); loadKeys(); }
       catch (e) { showToast(e.message, "error"); }
     }
     async function resumeKey(id) {
-      try { await api("/keys/" + id + "/resume", { method: "POST" }); showToast("Resumed"); loadKeys(); }
+      try { await api("/keys/" + encodeURIComponent(id) + "/resume", { method: "POST" }); showToast("Resumed"); loadKeys(); }
       catch (e) { showToast(e.message, "error"); }
     }
     async function banKey(id) {
       var r = prompt("Ban reason?"); if (r === null) return;
-      try { await api("/keys/" + id + "/ban", { method: "POST", body: { reason: r || "Banned" } }); showToast("Banned"); loadKeys(); }
+      try { await api("/keys/" + encodeURIComponent(id) + "/ban", { method: "POST", body: { reason: r || "Banned" } }); showToast("Banned"); loadKeys(); }
       catch (e) { showToast(e.message, "error"); }
     }
     async function unbanKey(id) {
-      try { await api("/keys/" + id + "/unban", { method: "POST" }); showToast("Unbanned"); loadKeys(); }
+      try { await api("/keys/" + encodeURIComponent(id) + "/unban", { method: "POST" }); showToast("Unbanned"); loadKeys(); }
       catch (e) { showToast(e.message, "error"); }
     }
     async function deleteKey(id) {
       if (!confirm("Permanently delete this key? This cannot be undone.")) return;
-      try { await api("/keys/" + id + "/delete", { method: "POST" }); showToast("Deleted"); loadKeys(); }
+      try { await api("/keys/" + encodeURIComponent(id) + "/delete", { method: "POST" }); showToast("Deleted"); loadKeys(); }
       catch (e) { showToast(e.message, "error"); }
     }
     function toggleSelectAllPage() {
@@ -374,7 +374,7 @@
       var params = new URLSearchParams();
       if (state.mod !== "all") params.set("mod", state.mod);
       if (state.status !== "all") params.set("status", state.status);
-      fetch(API_BASE + "/api/admin/keys/export?" + params.toString(), { headers: { Authorization: "Bearer " + getToken() } })
+      fetch(getApiBase() + "/api/admin/keys/export?" + params.toString(), { headers: { Authorization: "Bearer " + getToken() } })
         .then(function (r) { return r.blob(); })
         .then(function (blob) {
           var url = URL.createObjectURL(blob);
@@ -387,4 +387,3 @@
   </script>
 </body>
 </html>
-
