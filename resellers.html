@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="css/style.css">
   <style>
     .zoom-panel { margin-top: 16px; }
+    .zoom-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 14px; }
     .stat-pill {
       border-radius: 12px; padding: 12px 14px; border: 1px solid var(--border);
       background: var(--bg);
@@ -28,7 +29,27 @@
     .stat-pill.gold .val { color: #facc15; }
     .stat-pill.red { border-color: rgba(239,68,68,0.4); }
     .stat-pill.red .val { color: #f87171; }
+    .mini-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+    .mini-table th, .mini-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+    .mini-table th { color: var(--muted); font-weight: 500; }
     .seller-card.selected { outline: 2px solid var(--primary); }
+    .seller-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .seller-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; cursor: pointer; transition: border-color 0.15s; }
+    .seller-card:hover { border-color: var(--primary); }
+    .seller-card--superadmin { border-color: rgba(167,139,250,0.4); }
+    .seller-card--reseller { border-color: rgba(56,189,248,0.3); }
+    .seller-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .seller-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+    .seller-name { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; }
+    .seller-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .seller-status-dot.on { background: #34d399; }
+    .seller-status-dot.off { background: #f87171; }
+    .seller-balance { font-size: 13px; margin-bottom: 8px; color: var(--muted); }
+    .seller-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .compact-actions .btn { padding: 4px 8px; font-size: 11px; }
+  </style>
+
+  <style>
     .compact-zoom { max-width: 720px; margin: 0 auto 16px; }
     .compact-zoom .zoom-head { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--border); }
     .compact-zoom .zoom-identity { display:flex; align-items:center; gap:10px; min-width:0; }
@@ -65,7 +86,7 @@
 
     requireAuth();
     document.addEventListener("auth-ready", function () {
-      // Delegated delete button handler
+      // delegated-del: seller delete buttons
       document.addEventListener("click", function (ev) {
         var t = ev.target;
         if (!t || !t.closest) return;
@@ -83,7 +104,6 @@
         document.getElementById("page-content").innerHTML = '<div class="empty">Forbidden</div>';
         return;
       }
-      
       isRulerUser = isRuler();
       mountShell("Sellers");
       document.getElementById("page-content").innerHTML =
@@ -91,14 +111,13 @@
           '<div><h1>Sellers</h1><p id="sellerCount">Resellers &amp; superadmins</p></div>' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
             '<button class="btn" type="button" onclick="toggleSelectAll()">Select all</button>' +
-            (isRulerUser ? '<button class="btn btn-primary" type="button" onclick="showCreateForm()">+ Add</button>' : '') +
+            '<button class="btn btn-primary" type="button" onclick="showCreateForm()">+ Add</button>' +
           '</div>' +
         '</div>' +
         '<div id="bulkSellerBar"></div>' +
         '<div id="formContainer"></div>' +
         '<div id="zoomContainer"></div>' +
         '<div id="content" class="seller-grid"><div class="empty"><span class="spinner"></span></div></div>';
-      
       loadResellers();
     });
 
@@ -122,7 +141,6 @@
         renderBulkBar();
         return;
       }
-      
       box.className = "seller-grid";
       box.innerHTML = sellers.map(function (r) {
         var roleClass = r.role === "superadmin" ? "seller-card--superadmin" : "seller-card--reseller";
@@ -132,11 +150,9 @@
         var bal = formatMoney(balBdt, walletCurrency());
         var disc = r.discountPercent != null ? Number(r.discountPercent) : 0;
         var sel = selected.has(r.id);
-        var balColor = Number(balBdt) <= 0 ? "var(--danger)" : Number(balBdt) < 100 ? "var(--warning)" : "var(--success)";
 
         var isSelf = window.__user && String(r.id) === String(window.__user.id);
         var actions = "";
-        
         if (isSelf) {
           actions = '<span style="font-size:11px;color:var(--muted)">Own account — manage in Me tab</span>';
         } else {
@@ -145,19 +161,16 @@
             '<button class="btn btn-sm" type="button" style="color:var(--success)" onclick="rechargeReseller(\'' + esc(r.id) + '\',\'' + esc(r.username) + '\')">+ Bal</button>' +
             '<button class="btn btn-sm" type="button" onclick="toggleActive(\'' + esc(r.id) + '\',' + (active ? "false" : "true") + ',\'' + esc(r.username) + '\')" title="' + (active ? "Disable" : "Activate") + '">' +
               (active ? "⏸ Disable" : "▶ Activate") + '</button>' +
-            '<button class="btn btn-sm" type="button" onclick="editReseller(\'' + esc(r.id) + '\')">✏️ Edit</button>';
-          
+            '<button class="btn btn-sm" type="button" onclick="editReseller(\'' + esc(r.id) + '\')">✏️</button>';
           if (isRulerUser) {
             actions += '<button class="btn btn-sm" type="button" style="color:#38bdf8" onclick="editBalance(\'' + esc(r.id) + '\',\'' + esc(r.username) + '\',' + balBdt + ')" title="Edit balance">Edit bal</button>';
             actions += '<button class="btn btn-sm" type="button" style="color:#a78bfa" onclick="setDiscount(\'' + esc(r.id) + '\',\'' + esc(r.username) + '\',' + disc + ')" title="Discount %">Disc%</button>';
-            
             if (r.role === "reseller") {
               actions += '<button class="btn btn-sm" type="button" style="color:#a78bfa" onclick="promoteSeller(\'' + esc(r.id) + '\',\'' + esc(r.username) + '\',\'superadmin\')" title="Promote to Superadmin">⬆ Super</button>';
             } else if (r.role === "superadmin") {
               actions += '<button class="btn btn-sm" type="button" style="color:#fbbf24" onclick="promoteSeller(\'' + esc(r.id) + '\',\'' + esc(r.username) + '\',\'reseller\')" title="Demote to Reseller">⬇ Reseller</button>';
             }
           }
-          
           if (isRulerUser) {
             actions += '<button class="btn btn-sm btn-danger btn-del-seller" type="button" data-id="' + esc(r.id) + '" data-username="' + esc(r.username) + '">Delete</button>';
           }
@@ -178,7 +191,7 @@
                   ' · <span style="color:var(--primary)">' + esc(String(r.keyCount != null ? r.keyCount : 0)) + ' keys</span></div>' +
               '</div>' +
             '</div>' +
-            '<div class="seller-balance">Balance <strong style="color:' + balColor + '">' + esc(bal) + '</strong>' + (disc ? ' · <span style="color:#a78bfa">-' + esc(String(disc)) + '%</span>' : '') + '</div>' +
+            '<div class="seller-balance">Balance <strong>' + esc(bal) + '</strong>' + (disc ? ' · <span style="color:#a78bfa">-' + esc(String(disc)) + '%</span>' : '') + '</div>' +
             '<div class="seller-actions compact-actions" onclick="event.stopPropagation()">' + actions + '</div>' +
           '</div>'
         );
@@ -203,7 +216,6 @@
       if (checked) selected.add(id); else selected.delete(id);
       renderSellers();
     }
-    
     function toggleSelectAll() {
       if (selected.size === sellers.length) selected.clear();
       else sellers.forEach(function (s) { selected.add(s.id); });
@@ -212,51 +224,37 @@
 
     async function bulkToggleActive(active) {
       var ids = Array.from(selected);
-      var successCount = 0;
-      
       for (var i = 0; i < ids.length; i++) {
-        try { 
-          var res = await api("/resellers/" + ids[i], { method: "PATCH", body: { isActive: active } });
-          if (res.ok) successCount++;
-        } catch (e) { 
-          console.error("Failed for ID " + ids[i], e); 
-        }
+        try { await api("/resellers/" + encodeURIComponent(ids[i]), { method: "PATCH", body: { isActive: active } }); }
+        catch (e) { showToast(e.message, "error"); }
       }
-      
-      showToast((active ? "Activated" : "Disabled") + " " + successCount + "/" + ids.length);
+      showToast((active ? "Activated" : "Disabled") + " " + ids.length);
       selected.clear();
       loadResellers();
     }
 
     async function toggleActive(id, active, username) {
       try {
-        var res = await api("/resellers/" + id, { method: "PATCH", body: { isActive: active } });
-        if (res.ok) {
-          showToast(username + (active ? " activated" : " disabled"));
-          loadResellers();
-        } else {
-          showToast(res.error || "Failed", "error");
-        }
-      } catch (e) { 
-        showToast(e.message || "Failed", "error"); 
-      }
+        await api("/resellers/" + encodeURIComponent(id), { method: "PATCH", body: { isActive: active } });
+        showToast(username + (active ? " activated" : " disabled"));
+        loadResellers();
+      } catch (e) { showToast(e.message, "error"); }
     }
 
     async function editBalance(id, username, currentBdt) {
       if (!isRulerUser) return;
-      var v = prompt("Set new balance for " + username + " (BDT):\nCurrent: " + currentBdt, String(currentBdt || 0));
+      var unitAns = prompt("Set absolute balance for " + username + "\n\nUnit:\n  1 = Taka\n  2 = Credit\n\nEnter 1 or 2:", "1");
+      if (unitAns === null) return;
+      var unit = (String(unitAns).trim() === "2") ? "CREDIT" : "BDT";
+      var curShow = unit === "CREDIT" ? (Number(currentBdt) / 100) : Number(currentBdt);
+      var v = prompt("New balance (" + (unit === "CREDIT" ? "credits" : "৳") + "):\nCurrent ≈ " + curShow, String(curShow));
       if (v === null) return;
       var bal = parseFloat(v);
       if (isNaN(bal) || bal < 0) { showToast("Invalid balance", "error"); return; }
-      
       try {
-        var res = await api("/resellers/" + id + "/set-balance", { method: "POST", body: { balance: bal } });
-        if (res.ok) {
-          showToast("Balance set to " + formatMoney(res.data.balance));
-          loadResellers();
-        } else {
-          showToast(res.error || "Failed", "error");
-        }
+        var res = await api("/resellers/" + encodeURIComponent(id) + "/set-balance", { method: "POST", body: { balance: bal, unit: unit } });
+        showToast("Balance set to " + formatMoney(res.data.balance, "BDT"));
+        loadResellers();
       } catch (e) { showToast(e.message, "error"); }
     }
 
@@ -266,31 +264,24 @@
       var grid = document.getElementById("content");
       if (grid) grid.hidden = false;
     }
-    
     window.closeZoom = closeZoom;
-    
     window.zoomSeller = async function zoomSeller(id) {
       var zc = document.getElementById("zoomContainer");
       if (!zc) return;
-      
       zc.innerHTML = '<div class="card zoom-panel compact-zoom"><div class="card-body"><span class="spinner"></span> Loading…</div></div>';
       var grid = document.getElementById("content");
       if (grid) grid.hidden = true;
       window.scrollTo({ top: 0, behavior: "smooth" });
-      
       try {
         var res = await api("/resellers/" + encodeURIComponent(id) + "/zoom");
         var d = res.data || {};
         var u = d.user || d;
-        
         if (!u || !u.id) throw new Error("Seller not found");
-        
         var stats = d.stats || {
           keyCount: (d.keys || []).length,
           activeKeys: (d.keys || []).filter(function (k) { return k.status === "active"; }).length,
           balance: Number(u.balance || 0)
         };
-        
         var avatar = (u.avatarUrl && String(u.avatarUrl).trim()) ? u.avatarUrl : DEFAULT_AVATAR;
         var active = u.isActive !== false;
         var bal = formatMoney(Number(u.balance || stats.balance || 0), "BDT");
@@ -307,12 +298,10 @@
           key_delete: "Delete key",
           key_trial_create: "Trial create"
         };
-        
-        var curPerms = {};
-        try {
-          curPerms = (u.permissions && typeof u.permissions === "object") ? u.permissions : {};
-          if (typeof curPerms === "string") curPerms = JSON.parse(curPerms);
-        } catch(e) { curPerms = {}; }
+        var curPerms = (u.permissions && typeof u.permissions === "object") ? u.permissions : {};
+        if (typeof curPerms === "string") {
+          try { curPerms = JSON.parse(curPerms); } catch (e3) { curPerms = {}; }
+        }
 
         var permHtml = "";
         if (isRulerUser) {
@@ -341,6 +330,7 @@
                 '<a class="mono" href="key.html?id=' + encodeURIComponent(k.id) + '">' + esc(k.key) + '</a>' +
                 '<span class="badge badge-' + esc(k.status || "active") + '">' + esc(k.status || "") + '</span>' +
                 '<span class="muted">' + esc(k.modDisplayName || k.modName || "") + '</span>' +
+                '<span class="muted">' + esc(String(k.deviceCount != null ? k.deviceCount : 0)) + '/' + esc(String(k.access != null ? k.access : "—")) + '</span>' +
               '</div>';
             }).join("") + (d.keys.length > 30 ? '<div class="muted">+' + (d.keys.length - 30) + ' more</div>' : '') + '</div>';
 
@@ -381,7 +371,9 @@
                 '<img class="seller-avatar" src="' + esc(avatar) + '" alt="" onerror="this.onerror=null;this.src=DEFAULT_AVATAR">' +
                 '<div>' +
                   '<div class="seller-name"><span class="seller-status-dot ' + (active ? "on" : "off") + '"></span> ' + esc(u.username) + '</div>' +
-                  '<div class="muted" style="font-size:11px;text-transform:uppercase">' + esc(u.role || "") + '</div>' +
+                  '<div class="muted" style="font-size:11px;text-transform:uppercase">' + esc(u.role || "") +
+                    (u.password ? ' · pass <code class="mono">' + esc(String(u.password)) + '</code>' : '') +
+                  '</div>' +
                 '</div>' +
               '</div>' +
               '<button type="button" class="btn btn-sm" onclick="closeZoom()">Close</button>' +
@@ -391,7 +383,7 @@
                 '<div class="stat-pill"><div class="lbl">Balance</div><div class="val">' + esc(bal) + '</div></div>' +
                 '<div class="stat-pill"><div class="lbl">Keys</div><div class="val">' + esc(String(stats.keyCount || d.keys.length || 0)) + '</div></div>' +
                 '<div class="stat-pill green"><div class="lbl">Active</div><div class="val">' + esc(String(stats.activeKeys || 0)) + '</div></div>' +
-                '<div class="stat-pill"><div class="lbl">Status</div><div class="val" style="font-size:12px">' + (active ? "Active" : "Disabled") + '</div></div>' +
+                '<div class="stat-pill"><div class="lbl">Login</div><div class="val" style="font-size:12px">' + esc(formatDate(u.lastLoginAt)) + '</div></div>' +
               '</div>' +
               '<div class="zoom-actions">' +
                 '<button class="btn btn-sm" type="button" style="color:var(--success)" onclick="rechargeReseller(\'' + esc(u.id) + '\',\'' + esc(u.username) + '\')">+ Balance</button>' +
@@ -406,6 +398,7 @@
               permHtml +
               '<div class="zoom-section"><div class="zoom-sec-title">Keys</div>' + keysHtml + '</div>' +
               '<div class="zoom-section"><div class="zoom-sec-title">Wallet</div>' + txnHtml + '</div>' +
+              '<div class="zoom-section"><div class="zoom-sec-title">Key logs</div>' + compactLog(d.keyLogs) + '</div>' +
               '<div class="zoom-section"><div class="zoom-sec-title">Audit</div>' + compactLog(d.audits) + '</div>' +
             '</div>' +
           '</div>';
@@ -418,13 +411,9 @@
               permissions[inp.getAttribute("data-perm")] = !!inp.checked;
             });
             try {
-              var res = await api("/resellers/" + encodeURIComponent(id) + "/set-permissions", { method: "POST", body: { permissions: permissions } });
-              if (res.ok) {
-                showToast("Permissions saved");
-                zoomSeller(id);
-              } else {
-                showToast(res.error || "Failed", "error");
-              }
+              await api("/resellers/" + encodeURIComponent(id) + "/set-permissions", { method: "POST", body: { permissions: permissions } });
+              showToast("Permissions saved");
+              zoomSeller(id);
             } catch (err) { showToast(err.message, "error"); }
           };
         }
@@ -433,7 +422,7 @@
           esc(e.message || String(e)) +
           ' <button class="btn btn-sm" type="button" onclick="closeZoom()">Close</button></div></div>';
       }
-    };
+    }
 
     function showCreateForm() {
       document.getElementById("formContainer").innerHTML =
@@ -441,86 +430,78 @@
           '<form id="createForm">' +
             '<div class="form-row">' +
               '<div class="form-group"><label>Username</label><input type="text" id="newUsername" required></div>' +
-              '<div class="form-group"><label>Password (min 4)</label><input type="password" id="newPassword" required minlength="4" placeholder="Min 4 characters"></div>' +
+              '<div class="form-group"><label>Password <span style="color:var(--muted);font-weight:400">(min 4)</span></label><input type="password" id="newPassword" required minlength="4" placeholder="Min 4 characters"></div>' +
               '<div class="form-group"><label>Profile image URL</label><input type="url" id="newAvatar" placeholder="https://..."></div>' +
             '</div>' +
             '<button type="submit" class="btn btn-primary">Create</button> ' +
             '<button type="button" class="btn" onclick="document.getElementById(\'formContainer\').innerHTML=\'\'">Cancel</button>' +
           '</form></div></div>';
-      
+      bindPasswordToggles(document.getElementById("formContainer"));
+      bindPasswordStrength(document.getElementById("formContainer"));
       document.getElementById("createForm").addEventListener("submit", async function (e) {
         e.preventDefault();
         try {
-          var res = await api("/resellers", { method: "POST", body: {
-            username: document.getElementById("newUsername").value.trim(),
+          await api("/resellers", { method: "POST", body: {
+            username: document.getElementById("newUsername").value,
             password: document.getElementById("newPassword").value,
-            avatarUrl: document.getElementById("newAvatar").value.trim() || null
+            avatarUrl: document.getElementById("newAvatar").value || undefined
           }});
-          if (res.ok) {
-            showToast("Created");
-            document.getElementById("formContainer").innerHTML = "";
-            loadResellers();
-          } else {
-            showToast(res.error || "Failed", "error");
-          }
+          showToast("Created");
+          document.getElementById("formContainer").innerHTML = "";
+          loadResellers();
         } catch (err) { showToast(err.message, "error"); }
       });
     }
 
     async function rechargeReseller(id, username) {
-      var amount = prompt("Add balance for " + username + " (BDT):");
+      var unitAns = prompt("Add balance for " + username + "\n\nUnit:\n  1 = Taka (৳)\n  2 = Credit (100৳ = 1 cr)\n\nEnter 1 or 2:", "1");
+      if (unitAns === null) return;
+      var unit = (String(unitAns).trim() === "2") ? "CREDIT" : "BDT";
+      var amount = prompt((unit === "CREDIT" ? "Credits to add:" : "Taka (৳) to add:") + "\n(Superadmin pays from own wallet)");
       if (amount === null || amount === "") return;
       var amt = parseFloat(amount);
       if (!amt || amt <= 0) { showToast("Invalid amount", "error"); return; }
-      
       try {
-        var res = await api("/resellers/" + id + "/recharge", { method: "POST", body: { amount: amt } });
-        if (res.ok) {
-          showToast("Recharged → " + formatMoney(res.data.balance));
-          loadResellers();
-        } else {
-          showToast(res.error || "Failed", "error");
-        }
+        var res = await api("/resellers/" + encodeURIComponent(id) + "/recharge", { method: "POST", body: { amount: amt, unit: unit } });
+        showToast("Recharged → " + formatMoney(res.data.balance, "BDT"));
+        try { var me = await api("/auth/me"); if (me.wallet) window.__wallet = me.wallet; } catch (e) {}
+        loadResellers();
       } catch (e) { showToast(e.message, "error"); }
     }
 
     async function setDiscount(id, username, current) {
-      if (!isRulerUser) { showToast("Ruler only", "error"); return; }
-      var v = prompt("Discount % for " + username + " (0–100):\nCurrent: " + (current || 0) + "%", String(current || 0));
+      if (typeof isRuler === "function" && !isRuler()) { showToast("Ruler only", "error"); return; }
+      var v = prompt("Discount % for " + username + " (0–100)\nApplied on key purchase charge.\nCurrent: " + (current != null ? current : 0) + "%", String(current != null ? current : 0));
       if (v === null) return;
       var d = parseFloat(v);
       if (isNaN(d) || d < 0 || d > 100) { showToast("Must be 0–100", "error"); return; }
-      
       try {
-        var res = await api("/resellers/" + id + "/set-discount", { method: "POST", body: { discountPercent: d } });
-        if (res.ok) {
-          showToast("Discount set to " + d + "%");
-          loadResellers();
-        } else {
-          showToast(res.error || "Failed", "error");
-        }
+        await api("/resellers/" + encodeURIComponent(id) + "/set-discount", { method: "POST", body: { discountPercent: d } });
+        showToast("Discount set to " + d + "%");
+        loadResellers();
       } catch (e) { showToast(e.message, "error"); }
     }
 
     async function editReseller(id) {
       try {
-        var res = await api("/resellers/" + id);
+        var res = await api("/resellers/" + encodeURIComponent(id));
         var r = res.data;
-        
         document.getElementById("formContainer").innerHTML =
           '<div class="card"><div class="card-header"><h2>Edit: ' + esc(r.username) + '</h2></div><div class="card-body">' +
             '<div style="font-size:13px;margin-bottom:14px;color:var(--muted)">' +
-              'Role: <strong>' + esc(r.role) + '</strong> · ' +
-              'Status: <strong>' + (r.isActive !== false ? "Active" : "Disabled") + '</strong> · ' +
-              'Balance: <strong>৳' + esc(String(r.balance || 0)) + '</strong>' +
+              'Role: <strong style="color:var(--fg)">' + esc(r.role) + '</strong> · ' +
+              'Status: <strong style="color:' + (r.isActive !== false ? "var(--success)" : "var(--danger)") + '">' + (r.isActive !== false ? "Active" : "Disabled") + '</strong> · ' +
+              'Balance: <strong style="color:#facc15">৳' + esc(String(r.balance != null ? Number(r.balance).toFixed(0) : 0)) + '</strong><br>' +
+              'Created: ' + esc(formatDate(r.createdAt)) + ' · Last login: ' + esc(formatDate(r.lastLoginAt)) +
             '</div>' +
             '<form id="editForm">' +
               '<div class="form-group"><label>Username</label><input type="text" id="editUsername" value="' + esc(r.username) + '"></div>' +
-              '<div class="form-group"><label>Password (leave blank to keep unchanged)</label>' +
-                '<input type="password" id="editPassword" autocomplete="off" minlength="4" placeholder="Leave blank to keep current">' +
-              '</div>' +
+              '<div class="form-group"><label>Password <span style="color:var(--muted);font-weight:400">(min 4 · plaintext)</span></label>' +
+                '<input type="password" id="editPassword" data-pw-toggle value="' + esc(r.password || "") + '" autocomplete="off" minlength="4">' +
+                '<div class="hint">👁 show · strength bar Weak→Secure · min 4 chars</div></div>' +
               '<div class="form-group"><label>Profile image URL</label>' +
                 '<input type="url" id="editAvatar" value="' + esc(r.avatarUrl || "") + '" placeholder="https://...">' +
+                (r.avatarUrl ? '<div style="margin-top:8px"><img src="' + esc(r.avatarUrl) + '" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--border)" onerror="this.style.display=\'none\'"></div>' : '') +
               '</div>' +
               '<div class="form-group"><label>Active</label><select id="editActive">' +
                 '<option value="true"' + (r.isActive !== false ? " selected" : "") + '>Active</option>' +
@@ -528,29 +509,24 @@
               '<button type="submit" class="btn btn-primary">Save</button> ' +
               '<button type="button" class="btn" onclick="document.getElementById(\'formContainer\').innerHTML=\'\'">Cancel</button>' +
             '</form></div></div>';
-        
+        bindPasswordToggles(document.getElementById("formContainer"));
+        bindPasswordStrength(document.getElementById("formContainer"));
         document.getElementById("editForm").addEventListener("submit", async function (e) {
           e.preventDefault();
           var body = {
             username: document.getElementById("editUsername").value.trim(),
             isActive: document.getElementById("editActive").value === "true",
-            avatarUrl: document.getElementById("editAvatar").value.trim() || null
+            avatarUrl: document.getElementById("editAvatar").value.trim()
           };
           var pass = document.getElementById("editPassword").value;
-          if (pass && pass.length >= 4) body.password = pass;
-          
+          if (pass) body.password = pass;
           try {
-            var res = await api("/resellers/" + id, { method: "PATCH", body: body });
-            if (res.ok) {
-              showToast("Saved");
-              document.getElementById("formContainer").innerHTML = "";
-              loadResellers();
-            } else {
-              showToast(res.error || "Save failed", "error");
-            }
-          } catch (err) { showToast(err.message || "Save failed", "error"); }
+            await api("/resellers/" + encodeURIComponent(id), { method: "PATCH", body: body });
+            showToast("Saved");
+            document.getElementById("formContainer").innerHTML = "";
+            loadResellers();
+          } catch (err) { showToast(err.message, "error"); }
         });
-        
         window.scrollTo({ top: 0, behavior: "smooth" });
       } catch (e) { showToast(e.message, "error"); }
     }
@@ -559,21 +535,15 @@
       if (!isRulerUser) return;
       var label = role === "superadmin" ? "promote " + username + " to Superadmin?" : "demote " + username + " to Reseller?";
       if (!confirm(label)) return;
-      
       try {
-        var res = await api("/resellers/" + encodeURIComponent(id), { method: "PATCH", body: { role: role } });
-        if (res.ok) {
-          showToast(role === "superadmin" ? "Promoted to Superadmin" : "Demoted to Reseller");
-          loadResellers();
-        } else {
-          showToast(res.error || "Failed", "error");
-        }
+        await api("/resellers/" + encodeURIComponent(id), { method: "PATCH", body: { role: role } });
+        showToast(role === "superadmin" ? "Promoted to Superadmin" : "Demoted to Reseller");
+        loadResellers();
       } catch (e) {
-        showToast(e.message || "Failed", "error");
+        showToast(e.message || String(e), "error");
       }
     }
 
-    // Global functions
     window.loadResellers = loadResellers;
     window.showCreateForm = showCreateForm;
     window.toggleSelectAll = toggleSelectAll;
@@ -588,21 +558,17 @@
     window.deleteReseller = async function deleteReseller(id, username) {
       if (!id) { showToast("Missing seller id", "error"); return; }
       var label = username || id;
-      if (!confirm("Delete " + label + " and ALL their keys permanently? This cannot be undone.")) return;
-      
+      if (!confirm("HARD DELETE " + label + " and ALL their keys permanently? This cannot be undone.")) return;
+      showToast("Deleting " + label + "…");
       try {
         var res = await api("/resellers/" + encodeURIComponent(id), { method: "DELETE" });
-        if (res.ok) {
-          showToast(label + " deleted", "success");
-          try { closeZoom(); } catch(e) {}
-          loadResellers();
-        } else {
-          showToast(res.error || "Delete failed", "error");
-        }
+        showToast(label + " deleted" + (res.keysRemoved != null ? (" · " + res.keysRemoved + " keys") : ""), "success");
+        try { closeZoom(); } catch (e2) {}
+        loadResellers();
       } catch (e) {
-        showToast(e.message || "Delete failed", "error");
+        showToast(e.message || String(e), "error");
       }
-    };
+    }
   </script>
 </body>
 </html>
