@@ -162,7 +162,6 @@ function scorePassword(pw) {
   if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
   if (/\d/.test(pw)) score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
-  // map raw points to 0–4
   if (score <= 1) return 0;
   if (score === 2) return 1;
   if (score === 3) return 2;
@@ -178,10 +177,6 @@ var PW_LEVELS = [
   { key: "secure", label: "Secure", pct: 100, color: "#34d399" }
 ];
 
-/**
- * Attach strength meter under password input(s).
- * Call after bindPasswordToggles.
- */
 function bindPasswordStrength(root) {
   root = root || document;
   root.querySelectorAll("input[type=password], input[data-pw-toggle]").forEach(function (input) {
@@ -198,7 +193,6 @@ function bindPasswordStrength(root) {
       '<div class="pw-strength-track"><div class="pw-strength-fill"></div></div>' +
       '<div class="pw-strength-label"><span>Strength</span><span class="lvl weak">Weak</span></div>';
 
-    // Place after pw-wrap if present, else after input
     var anchor = input.closest(".pw-wrap") || input;
     if (anchor.parentNode) {
       if (anchor.nextSibling) anchor.parentNode.insertBefore(meter, anchor.nextSibling);
@@ -219,7 +213,6 @@ function bindPasswordStrength(root) {
       var s = scorePassword(pw);
       var info = PW_LEVELS[s];
       fill.style.width = info.pct + "%";
-      // gradient feel: blend toward green as it grows
       fill.style.background = "linear-gradient(90deg, #ef4444 0%, " + info.color + " 100%)";
       lvl.className = "lvl " + info.key;
       lvl.textContent = info.label;
@@ -320,31 +313,28 @@ function requireAuth() {
         if (me.user && me.user.permissions) window.__user.permissions = me.user.permissions;
         if (me.user && me.user.discountPercent != null) window.__user.discountPercent = me.user.discountPercent;
       } catch (e) {}
+      
       try {
-        var st = await api("/settings");
+        var st = await api("/settings/branding");
         var d = (st && st.data) || {};
-        function asStr(v, fallback) {
-          if (v == null) return fallback;
-          if (typeof v === "string") {
-            // unwrap JSON-encoded strings e.g. "\"Fox\""
-            if ((v.charAt(0) === '"' && v.charAt(v.length - 1) === '"') || (v.charAt(0) === "'")) {
-              try {
-                var p = JSON.parse(v);
-                if (typeof p === "string") return p;
-              } catch (e) {}
-            }
-            return v;
-          }
-          if (typeof v === "object" && v !== null && v.value != null) return asStr(v.value, fallback);
-          return String(v);
+        
+        if (d && d.brandName) {
+          window.__brand = {
+            name: d.brandName || "Fox Store",
+            logoUrl: d.logoUrl || ""
+          };
+        } else if (d && d.name) {
+          window.__brand = {
+            name: d.name || "Fox Store",
+            logoUrl: d.logoUrl || ""
+          };
+        } else {
+          window.__brand = window.__brand || { name: "Fox Store", logoUrl: "" };
         }
-        window.__brand = {
-          name: asStr(d.brand_name, "Fox Store") || "Fox Store",
-          logoUrl: asStr(d.brand_logo_url, "") || ""
-        };
       } catch (e) {
         window.__brand = window.__brand || { name: "Fox Store", logoUrl: "" };
       }
+      
       document.dispatchEvent(new Event("auth-ready"));
     }
   });
@@ -378,7 +368,7 @@ function daysUntil(d) {
   if (!d) return 0;
   return Math.max(0, Math.floor((new Date(d).getTime() - Date.now()) / 86400000));
 }
-var CREDIT_RATE = 100; // 100 BDT = 1 credit
+var CREDIT_RATE = 100;
 function walletCurrency() {
   var c = (window.__wallet && window.__wallet.currency) || "BDT";
   return String(c).toUpperCase() === "CREDIT" ? "CREDIT" : "BDT";
@@ -388,13 +378,11 @@ function userDiscountPercent() {
   var d = Number(u.discountPercent);
   return isNaN(d) ? 0 : Math.min(100, Math.max(0, d));
 }
-/** Apply seller discount to BDT amount */
 function afterDiscountBdt(bdt) {
   var d = userDiscountPercent();
   var n = Number(bdt) || 0;
   return Math.round(n * (1 - d / 100) * 100) / 100;
 }
-/** n is always BDT stored amount — formats in user's chosen unit */
 function formatMoney(n, unit) {
   unit = unit || walletCurrency();
   var bdt = Number(n || 0);
@@ -406,7 +394,6 @@ function formatMoney(n, unit) {
   return "৳" + (Math.abs(bdt - Math.round(bdt)) < 1e-9 ? String(Math.round(bdt)) : bdt.toFixed(2));
 }
 function formatMoneyPlain(n) { return Number(n || 0).toFixed(2); }
-/** Price with optional strike when user has discount. listBdt = catalog price in BDT */
 function formatPriceHtml(listBdt) {
   var list = Number(listBdt) || 0;
   var d = userDiscountPercent();
@@ -423,7 +410,6 @@ function copyToClipboard(text) {
   navigator.clipboard.writeText(text);
   showToast("Copied: " + text.substring(0, 20) + (text.length > 20 ? "..." : ""));
 }
-
 
 var DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%20fill%3D%22none%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2232%22%20fill%3D%22%2327272a%22/%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2212%22%20fill%3D%22%2352525b%22/%3E%3Cpath%20d%3D%22M8%2056c0-12%2010.7-20%2024-20s24%208%2024%2020%22%20fill%3D%22%2352525b%22/%3E%3C/svg%3E";
 function defaultAvatar() { return DEFAULT_AVATAR; }
@@ -448,18 +434,19 @@ function balanceTone(n) {
 
 /** Shell: top header card + bottom nav + #page-content outlet */
 function renderNav(active) {
-  return mountShellHtml(active);
+  var shell = mountShellHtml(active);
+  var temp = document.createElement('div');
+  temp.innerHTML = shell;
+  if (!temp.querySelector('#page-content')) {
+    shell += '<main class="main" id="page-content"></main>';
+  }
+  return shell;
 }
 
 function mountShell(active) {
   var app = document.getElementById("app");
   if (!app) return;
-  if (!document.getElementById("shell-header")) {
-    app.innerHTML = mountShellHtml(active);
-  } else {
-    // update active nav + balance/profile
-    app.innerHTML = mountShellHtml(active);
-  }
+  app.innerHTML = mountShellHtml(active);
 }
 
 function mountShellHtml(active) {
@@ -520,7 +507,6 @@ function mountShellHtml(active) {
 }
 
 function getNavLinks() {
-  // Tabs: Dashboard | Apps | Purchase | Keys | Sellers | Logs | Me
   return [
     { href: pageUrl("dashboard.html"), label: "Dashboard", icon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>', roles: ["ruler", "superadmin", "reseller"] },
     { href: pageUrl("mods.html"), label: "Apps", icon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>', roles: ["ruler", "superadmin", "reseller"] },
@@ -706,6 +692,39 @@ window.getMods = getMods;
 window.createMod = createMod;
 window.updateMod = updateMod;
 window.deleteMod = deleteMod;
+window.toggleMod = toggleMod;
+window.reorderMods = reorderMods;
+window.getResellers = getResellers;
+window.createReseller = createReseller;
+window.getResellerDetail = getResellerDetail;
+window.rechargeReseller = rechargeReseller;
+window.setResellerBalance = setResellerBalance;
+window.setResellerDiscount = setResellerDiscount;
+window.deleteReseller = deleteReseller;
+window.getBranding = getBranding;
+window.saveBranding = saveBranding;
+window.getWalletInfo = getWalletInfo;
+window.getStats = getStats;
+window.getAuditLogs = getAuditLogs;
+
+// Global functions
+window.api = api;
+window.showToast = showToast;
+window.esc = esc;
+window.formatDate = formatDate;
+window.formatMoney = formatMoney;
+window.copyToClipboard = copyToClipboard;
+window.checkAuth = checkAuth;
+window.requireAuth = requireAuth;
+window.logout = logout;
+window.isRuler = isRuler;
+window.isManager = isManager;
+window.isReseller = isReseller;
+window.hasPerm = hasPerm;
+window.mountShell = mountShell;
+window.renderNav = renderNav;
+window.bindPasswordToggles = bindPasswordToggles;
+window.bindPasswordStrength = bindPasswordStrength;
 window.toggleMod = toggleMod;
 window.reorderMods = reorderMods;
 window.getResellers = getResellers;
