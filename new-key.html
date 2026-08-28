@@ -94,7 +94,7 @@
                 "</div>")
             : ('<div class="form-group"><label>Key mode</label>' +
                 '<div class="purchase-summary" style="margin:0">' +
-                  "<strong>Activate on login</strong> — package required (not changeable)" +
+                  "<strong>Regular</strong> — paid package" +
                 "</div></div>")) +
 
           '<div class="form-row">' +
@@ -126,12 +126,7 @@
       document.getElementById("count").addEventListener("input", updateSummary);
       document.getElementById("submitBtn").addEventListener("click", generateKeys);
 
-      document.querySelectorAll('input[name="nameMode"]').forEach(function (el) {
-        el.addEventListener("change", onNameModeChange);
-      });
-      onNameModeChange();
-
-      if (ruler) {
+      if (ruler || canTrial) {
         document.querySelectorAll('input[name="keyMode"]').forEach(function (el) {
           el.addEventListener("change", onKeyModeChange);
         });
@@ -170,7 +165,7 @@
 
     function getKeyMode() {
       var canTrial = isRulerUser() || (typeof hasPerm === "function" && hasPerm("key_trial_create"));
-      if (!canTrial) return "regular"; // sellers: package + activate-on-login, no type picker
+      if (!canTrial) return "regular";
       var checked = document.querySelector('input[name="keyMode"]:checked');
       return checked ? checked.value : "regular";
     }
@@ -189,27 +184,6 @@
         if (inp) lab.classList.toggle("is-on", inp.checked);
       });
       updateSummary();
-    }
-
-    function onNameModeChange() {
-      var mode = (document.querySelector('input[name="nameMode"]:checked') || {}).value || "auto";
-      var pg = document.getElementById("prefixGroup");
-      var cg = document.getElementById("customKeyGroup");
-      if (pg) pg.style.display = mode === "prefix" ? "" : "none";
-      if (cg) cg.style.display = mode === "custom" ? "" : "none";
-      var countEl = document.getElementById("count");
-      if (countEl) {
-        if (mode === "custom") {
-          countEl.value = "1";
-          countEl.disabled = true;
-        } else {
-          countEl.disabled = false;
-        }
-      }
-      document.querySelectorAll("#nameModeRadios label").forEach(function (lab) {
-        var inp = lab.querySelector("input");
-        if (inp) lab.classList.toggle("is-on", inp.checked);
-      });
     }
 
     async function loadPackages() {
@@ -249,12 +223,13 @@
       var p = opt && opt.getAttribute("data-prefix");
       return (p && p.trim()) || "HQCRX-BLUEWHALE";
     }
+
     function updateSummary() {
       var box = document.getElementById("chargeSummary");
       if (!box) return;
       var mode = getKeyMode();
       if (mode === "trial") {
-        box.innerHTML = "<strong>Trial / Activate on login</strong> — no wallet charge (Ruler).";
+        box.innerHTML = "<strong>Trial / Activate on login</strong> — no wallet charge.";
         return;
       }
       var opt = document.getElementById("packageSelect") && document.getElementById("packageSelect").selectedOptions[0];
@@ -307,14 +282,13 @@
         customerNote: ((document.getElementById("customerNote") || {}).value || "").trim() || undefined
       };
 
-      // Sellers: always paid package keys (regular). Mode label is Activate on login (fixed).
-      // Ruler: regular (package) or trial (activate on login, free).
       if (mode === "trial") {
         body.keyType = "trial";
         var td = document.getElementById("trialDuration");
         body.trialDuration = td && td.value === "custom"
           ? ((document.getElementById("trialDurationCustom") || {}).value || "").trim()
           : (td ? td.value : "7d");
+        body.packageId = undefined;
       } else {
         body.keyType = "regular";
         if (!packageId) {
@@ -342,7 +316,7 @@
       try {
         var res = await api("/keys", { method: "POST", body: body });
 
-        // Refresh wallet without destroying the form (mountShell caused black screen)
+        // Refresh wallet without destroying the form
         try {
           var me = await api("/auth/me");
           if (me.wallet) window.__wallet = me.wallet;
