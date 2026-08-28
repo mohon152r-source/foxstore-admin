@@ -10,7 +10,7 @@
   img-src 'self' https: data:;
   connect-src 'self' https: http://localhost:* http://127.0.0.1:*;
 ">
-  <title>Dashboard â€” Fox Store</title>
+  <title>Dashboard — Fox Store</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
     .dash-qa {
@@ -151,16 +151,18 @@
     document.addEventListener("auth-ready", async function () {
       mountShell("Dashboard");
       var root = document.getElementById("page-content");
+      if (!root) return;
+      
       root.innerHTML =
         '<div class="page-header">' +
           '<div><h1>Dashboard</h1><p>Overview at a glance</p></div>' +
-          '<button class="btn btn-sm" type="button" id="refreshBtn">â†» Refresh</button>' +
+          '<button class="btn btn-sm" type="button" id="refreshBtn">↻ Refresh</button>' +
         '</div>' +
         '<div class="dash-qa" id="quickActions"></div>' +
         '<div class="stats-grid" id="stats"><div class="empty"><span class="spinner"></span></div></div>' +
         '<div class="dash-row">' +
           '<div class="dash-panel">' +
-            '<div class="dash-panel-h"><h2>Keys Â· 14 days</h2><span class="meta" id="chart14Meta"></span></div>' +
+            '<div class="dash-panel-h"><h2>Keys · 14 days</h2><span class="meta" id="chart14Meta"></span></div>' +
             '<div class="bar-chart" id="chart14"></div>' +
           '</div>' +
           '<div class="dash-panel">' +
@@ -171,11 +173,11 @@
         '</div>' +
         '<div class="dash-row">' +
           '<div class="dash-panel">' +
-            '<div class="dash-panel-h"><h2>Apps</h2><a class="btn btn-sm" href="mods.html">Open â†’</a></div>' +
+            '<div class="dash-panel-h"><h2>Apps</h2><a class="btn btn-sm" href="mods.html">Open →</a></div>' +
             '<div id="byMod"><div class="empty"><span class="spinner"></span></div></div>' +
           '</div>' +
           '<div class="dash-panel">' +
-            '<div class="dash-panel-h"><h2>Keys snapshot</h2><a class="btn btn-sm" href="keys.html">All â†’</a></div>' +
+            '<div class="dash-panel-h"><h2>Keys snapshot</h2><a class="btn btn-sm" href="keys.html">All →</a></div>' +
             '<div id="keysSnap"></div>' +
           '</div>' +
         '</div>';
@@ -189,69 +191,74 @@
         var data = await api("/stats");
         var s = data.data || {};
         var t = s.totals || {};
+        
+        // Default values
+        t.total = t.total || 0;
+        t.active = t.active || 0;
+        t.paused = t.paused || 0;
+        t.banned = t.banned || 0;
+        t.apps = t.apps || 0;
+        t.sellers = t.sellers || 0;
+        
         var role = (window.__user && window.__user.role) || "";
 
         // Quick actions
         var qa = document.getElementById("quickActions");
-        qa.innerHTML =
-          '<a href="keys.html"><span class="ico" style="background:rgba(99,102,241,0.2)">ðŸ”‘</span> Keys Â· ' + esc(String(t.total || 0)) + '</a>' +
-          '<a href="mods.html"><span class="ico" style="background:rgba(167,139,250,0.2)">ðŸ“±</span> Apps Â· ' + esc(String(t.apps || 0)) + '</a>' +
-          '<a href="new-key.html"><span class="ico" style="background:rgba(34,197,94,0.2)">ï¼‹</span> Purchase</a>' +
-          (role === "ruler" || role === "superadmin"
-            ? '<a href="resellers.html"><span class="ico" style="background:rgba(56,189,248,0.2)">ðŸ‘¥</span> Sellers Â· ' + esc(String(t.sellers || 0)) + '</a>'
-            : '');
+        var qaHtml = 
+          '<a href="keys.html"><span class="ico" style="background:rgba(99,102,241,0.2)">🔑</span> Keys · ' + t.total + '</a>' +
+          '<a href="mods.html"><span class="ico" style="background:rgba(167,139,250,0.2)">📱</span> Apps · ' + t.apps + '</a>' +
+          '<a href="new-key.html"><span class="ico" style="background:rgba(34,197,94,0.2)">＋</span> Purchase</a>';
+        
+        if (role === "ruler" || role === "superadmin") {
+          qaHtml += '<a href="resellers.html"><span class="ico" style="background:rgba(56,189,248,0.2)">👥</span> Sellers · ' + t.sellers + '</a>';
+        }
+        
+        qa.innerHTML = qaHtml;
 
         // Stat cards
         var cards = [
-          { label: "Total Keys", value: t.total, sub: (t.devices || 0) + " devices bound", href: "keys.html", color: "var(--fg)" },
-          { label: "Active", value: t.active, sub: "not expired", href: "keys.html", color: "var(--success)" },
-          { label: "Paused / Banned", value: (t.paused || 0) + (t.banned || 0), sub: (t.paused || 0) + " paused Â· " + (t.banned || 0) + " banned", href: "keys.html", color: "var(--warning)" },
-          { label: "Expired / Revoked", value: (t.expired || 0) + (t.revoked || 0), sub: (t.expired || 0) + " exp Â· " + (t.revoked || 0) + " rev", href: "keys.html", color: "var(--danger)" },
-          { label: "Trial Keys", value: t.trialTotal || 0, sub: (t.trialActive || 0) + " active Â· " + (t.trialDevices || 0) + " devices", href: "keys.html", color: "#a78bfa" },
-          { label: "Apps", value: t.apps || 0, sub: (t.activeApps || 0) + " enabled", href: "mods.html", color: "#38bdf8" },
+          { label: "Total Keys", value: t.total, sub: "All keys", href: "keys.html", color: "var(--fg)" },
+          { label: "Active", value: t.active, sub: "Not expired", href: "keys.html", color: "var(--success)" },
+          { label: "Paused", value: t.paused, sub: "Paused keys", href: "keys.html", color: "var(--warning)" },
+          { label: "Banned", value: t.banned, sub: "Banned keys", href: "keys.html", color: "var(--danger)" },
+          { label: "Apps", value: t.apps, sub: "Total apps", href: "mods.html", color: "#38bdf8" }
         ];
-        if (s.wallet) {
-          cards.push({
-            label: "Wallet",
-            value: "à§³" + Number(s.wallet.balance || 0).toFixed(0),
-            sub: "your balance",
-            href: "settings.html",
-            color: "var(--primary)"
-          });
-        }
+        
         if (role === "ruler" || role === "superadmin") {
           cards.push({
             label: "Sellers",
-            value: t.sellers || 0,
-            sub: (t.sellersActive || 0) + " active",
+            value: t.sellers,
+            sub: "Resellers",
             href: "resellers.html",
             color: "#f472b6"
           });
         }
 
         document.getElementById("stats").innerHTML = cards.map(function (c) {
-          return '<a class="stat-card clickable" href="' + esc(c.href) + '">' +
-            '<div class="label">' + esc(c.label) + '</div>' +
-            '<div class="value" style="color:' + c.color + '">' + esc(String(c.value)) + '</div>' +
-            (c.sub ? '<div class="sub">' + esc(c.sub) + '</div>' : '') +
+          return '<a class="stat-card clickable" href="' + c.href + '">' +
+            '<div class="label">' + c.label + '</div>' +
+            '<div class="value" style="color:' + c.color + '">' + c.value + '</div>' +
+            '<div class="sub">' + c.sub + '</div>' +
           '</a>';
         }).join("");
 
         // 14-day bar chart
-        var days = s.last14Days || s.last7Days || [];
+        var days = s.last14Days || [];
         var max = 1;
         days.forEach(function (d) { if (d.count > max) max = d.count; });
         var total14 = days.reduce(function(a,d){ return a + (d.count||0); }, 0);
+        
         var meta = document.getElementById("chart14Meta");
-        if (meta) meta.textContent = total14 + " keys Â· peak " + max + " / day";
+        if (meta) meta.textContent = days.length ? (total14 + " keys") : "No data";
+        
         document.getElementById("chart14").innerHTML = days.length
           ? days.map(function (d) {
               var h = Math.max(3, Math.round((d.count / max) * 100));
               var label = String(d.date || "").slice(5);
               return '<div class="bar-col">' +
-                '<div class="bar-val">' + (d.count ? esc(String(d.count)) : "") + '</div>' +
-                '<div class="bar" style="height:' + h + '%" title="' + esc(d.date + ": " + d.count) + '"></div>' +
-                '<div class="label">' + esc(label) + '</div></div>';
+                '<div class="bar-val">' + (d.count ? d.count : "") + '</div>' +
+                '<div class="bar" style="height:' + h + '%" title="' + (d.date + ": " + d.count) + '"></div>' +
+                '<div class="label">' + label + '</div></div>';
             }).join("")
           : '<div class="empty">No data yet</div>';
 
@@ -260,66 +267,61 @@
         var sum = br.reduce(function (a, x) { return a + x.count; }, 0) || 1;
         var angle = 0;
         var stops = [];
+        
         br.forEach(function (x) {
           var deg = (x.count / sum) * 360;
           stops.push(x.color + " " + angle + "deg " + (angle + deg) + "deg");
           angle += deg;
         });
+        
         if (!stops.length) stops.push("#27272a 0deg 360deg");
 
         document.getElementById("statusDonut").innerHTML =
           '<div class="donut" style="background:conic-gradient(' + stops.join(",") + ')">' +
-            '<div class="donut-inner"><strong>' + esc(String(t.total || 0)) + '</strong><span>keys</span></div></div>';
+            '<div class="donut-inner"><strong>' + t.total + '</strong><span>keys</span></div></div>';
+        
         var sm = document.getElementById("statusMeta");
         if (sm) sm.textContent = br.length + " statuses";
+        
         document.getElementById("statusBars").innerHTML = br.length
           ? br.map(function (x) {
               var pct = Math.round((x.count / sum) * 100);
               return '<div class="status-row">' +
-                '<span>' + esc(x.status) + '</span>' +
+                '<span>' + x.status + '</span>' +
                 '<div class="status-track"><div class="status-fill" style="width:' + pct + '%;background:' + x.color + '"></div></div>' +
-                '<span style="text-align:right;font-weight:650">' + esc(String(x.count)) + '</span></div>';
+                '<span style="text-align:right;font-weight:650">' + x.count + '</span></div>';
             }).join("")
           : '<div class="empty">No keys</div>';
-
-        var sm = document.getElementById("statusMeta");
-        if (sm) sm.textContent = (t.devices || 0) + " devices bound Â· auto";
-        document.getElementById("statusBars").innerHTML = (s.statusBreakdown || []).map(function (x) {
-          var pct = sum ? Math.round((x.count / sum) * 100) : 0;
-          return '<div class="status-row">' +
-            '<span class="name">' + esc(x.status) + '</span>' +
-            '<div class="track"><div class="fill" style="width:' + pct + '%;background:' + x.color + '"></div></div>' +
-            '<span class="cnt">' + esc(String(x.count)) + '</span></div>';
-        }).join("");
 
         // Apps list
         var mods = s.byMod || [];
         var maxMod = 1;
         mods.forEach(function (m) { if (m.keyCount > maxMod) maxMod = m.keyCount; });
+        
         document.getElementById("byMod").innerHTML = mods.length
           ? '<div class="mod-list">' + mods.map(function (m) {
-              var initial = esc((m.displayName || m.name || '?').charAt(0).toUpperCase());
+              var initial = (m.displayName || m.name || '?').charAt(0).toUpperCase();
               var logo = m.logoUrl
-                ? ('<img class="mod-logo" src="' + esc(m.logoUrl) + '" alt="">')
+                ? ('<img class="mod-logo" src="' + m.logoUrl + '" alt="">')
                 : ('<div class="mod-logo">' + initial + '</div>');
               return '<a class="mod-row" href="mods.html">' + logo +
                 '<div style="flex:1;min-width:0">' +
-                  '<div style="font-weight:600;font-size:13px">' + esc(m.displayName || m.name) +
-                    (m.isActive === false ? ' <span class="badge badge-deleted">off</span>' : '') +
+                  '<div style="font-weight:600;font-size:13px">' + (m.displayName || m.name) +
+                    (m.isActive === false || m.isActive === 0 ? ' <span class="badge badge-deleted">off</span>' : '') +
                   '</div>' +
                   '<div style="height:5px;background:var(--bg);border-radius:3px;margin-top:6px;overflow:hidden">' +
                     '<div style="height:100%;width:' + Math.round((m.keyCount / maxMod) * 100) + '%;background:var(--primary)"></div></div>' +
                 '</div>' +
-                '<span style="color:var(--muted);font-size:12px">ðŸ”‘ ' + esc(String(m.keyCount)) + '</span></a>';
+                '<span style="color:var(--muted);font-size:12px">🔑 ' + (m.keyCount || 0) + '</span></a>';
             }).join("") + '</div>'
-          : '<div class="empty">No apps yet. <a href="mods.html">Add one â†’</a></div>';
+          : '<div class="empty">No apps yet. <a href="mods.html">Add one →</a></div>';
 
         // Keys snapshot
         document.getElementById("keysSnap").innerHTML =
           '<div class="snap-grid">' +
             snapTile("Active", t.active, "#22c55e", "keys.html") +
-            snapTile("Trial", t.trialTotal, "#a78bfa", "keys.html") +
-            snapTile("Devices (auto)", t.devices, "#38bdf8", "keys.html") +
+            snapTile("Total", t.total, "#6366f1", "keys.html") +
+            snapTile("Apps", t.apps, "#38bdf8", "mods.html") +
             snapTile("Paused", t.paused, "#f59e0b", "keys.html") +
           '</div>' +
           '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">' +
@@ -328,17 +330,19 @@
             '<a class="btn btn-sm" href="mods.html">Manage apps</a>' +
           '</div>';
       } catch (err) {
-        document.getElementById("stats").innerHTML =
-          '<div class="alert alert-error">' + esc(err.message || String(err)) + '</div>';
+        console.error("Dashboard error:", err);
+        var statsEl = document.getElementById("stats");
+        if (statsEl) {
+          statsEl.innerHTML = '<div class="alert alert-error">Error: ' + (err.message || String(err)) + '</div>';
+        }
       }
     }
 
     function snapTile(label, value, color, href) {
       return '<a href="' + href + '" style="text-decoration:none;color:inherit;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--bg);display:block">' +
-        '<div style="font-size:11px;color:var(--muted)">' + esc(label) + '</div>' +
-        '<div style="font-size:20px;font-weight:700;color:' + color + '">' + esc(String(value != null ? value : 0)) + '</div></a>';
+        '<div style="font-size:11px;color:var(--muted)">' + label + '</div>' +
+        '<div style="font-size:20px;font-weight:700;color:' + color + '">' + (value != null ? value : 0) + '</div></a>';
     }
   </script>
 </body>
 </html>
-
