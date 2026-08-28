@@ -52,7 +52,7 @@
   w.DFOX_BACKUP_API = strip(BACKUP_API);
   w.DFOX_GAME_API = strip(GAME_API);
   w.DFOX_API_BASE = base;
-  w.DFOX_API_BASE = base;
+  w.__DFOX_API_BASE__ = base;
 
   w.getApiBase = function () {
     return strip(w.DFOX_API_BASE || PRIMARY_API);
@@ -83,7 +83,7 @@
       next = strip(PRIMARY_API);
     }
     w.DFOX_API_BASE = next;
-    w.DFOX_API_BASE = next;
+    w.__DFOX_API_BASE__ = next;
     return next;
   };
   w.getApiSlot = function () {
